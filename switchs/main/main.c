@@ -55,8 +55,8 @@
    If you'd rather not, just change the below entries to strings with
    the config you want - ie #define EXAMPLE_WIFI_SSID "mywifissid"
 */
-#define EXAMPLE_WIFI_SSID "Leon A.one"//CONFIG_WIFI_SSID
-#define EXAMPLE_WIFI_PASS "11330232"//CONFIG_WIFI_PASSWORD
+#define EXAMPLE_WIFI_SSID ""//CONFIG_WIFI_SSID
+#define EXAMPLE_WIFI_PASS ""//CONFIG_WIFI_PASSWORD
 
 /* FreeRTOS event group to signal when we are connected & ready to make a request */
 static EventGroupHandle_t wifi_event_group;
@@ -67,9 +67,9 @@ static EventGroupHandle_t wifi_event_group;
 const int CONNECTED_BIT = BIT0;
 
 /* Constants that aren't configurable in menuconfig */
-#define WEB_SERVER "linhomes-afa8a.firebaseio.com"
+#define WEB_SERVER ""
 #define WEB_PORT "443"
-#define WEB_URL "https://linhomes-afa8a.firebaseio.com/switchs/"
+#define WEB_URL ""
 
 static const char *TAG = "example";
 
