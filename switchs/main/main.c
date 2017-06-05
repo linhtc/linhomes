@@ -68,13 +68,21 @@ const int CONNECTED_BIT = BIT0;
 /* Constants that aren't configurable in menuconfig */
 #define WEB_SERVER "linhomes-afa8a.firebaseio.com"
 #define WEB_PORT "443"
-#define WEB_URL "https://linhomes-afa8a.firebaseio.com/switchs/"
+#define WEB_URL "/switchs/"
 
 static const char *TAG = "example";
 
 //char *WEB_URL = "https://linhomes-afa8a.firebaseio.com/switchs/";
 char *REQUEST = "";
 void info_listener(char argv[]);
+void push_listener(char argv[], int state);
+
+static const char *REQUEST2 = "PATCH /switchs/30-ae-a4-02-9e-58/pins/18/.json HTTP/1.1\r\n"
+    "Host: linhomes-afa8a.firebaseio.com\r\n"
+	"Content-Type: application/x-www-form-urlencoded\r\n"
+	"Cache-Control: no-cache\r\n"
+    "Postman-Token: b0d1bcc1-6e98-9e4a-b1d5-dd30a367d52d\r\n"
+	"{\"response\":0}";
 
 /* Root cert for howsmyssl.com, taken from server_root_cert.pem
    The PEM file was extracted from the output of this command:
@@ -208,13 +216,13 @@ static void https_get_task(void *pvParameters){
 
 		char request[100] = "GET ";
 		strcat(request, url);
-		strcat(request, " HTTP/1.0\r\n");
+		strcat(request, " HTTP/1.1\r\n");
 		strcat(request, "Host: linhomes-afa8a.firebaseio.com\r\n");
 		strcat(request, "User-Agent: esp-idf/1.0 esp32\r\n");
 		strcat(request, "Accept: application/json\r\n");
 		strcat(request, "\r\n");
 		REQUEST = request;
-//		printf("%s\n", REQUEST);
+		printf("%s\n", REQUEST);
 		while((ret = mbedtls_ssl_write(&ssl, (const unsigned char *)REQUEST, strlen(REQUEST))) <= 0){
 			if(ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
 				ESP_LOGE(TAG, "mbedtls_ssl_write returned -0x%x", -ret);
@@ -285,11 +293,6 @@ void info_listener(char *buf){
 		tcpip_adapter_ip_info_t ip;
 		memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
 		if (tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0) {
-//			ESP_LOGI(TAG, "~~~~~~~~~~~");
-//			ESP_LOGI(TAG, "IP:"IPSTR, IP2STR(&ip.ip));
-//			ESP_LOGI(TAG, "MASK:"IPSTR, IP2STR(&ip.netmask));
-//			ESP_LOGI(TAG, "GW:"IPSTR, IP2STR(&ip.gw));
-//			ESP_LOGI(TAG, "~~~~~~~~~~~");
 			char *ip_address = inet_ntoa(ip.ip);
 			cJSON_AddStringToObject(root, "wifi_ip", ip_address);
 		}
@@ -297,12 +300,188 @@ void info_listener(char *buf){
 		char *test = cJSON_Print(root);
 		ESP_LOGI(TAG, "\ncJSON_Print----------->\n");
 		printf("%s\n\n", test);
+		cJSON *pins = cJSON_GetObjectItem(root, "pins");
+		if(pins != NULL){
+			test = cJSON_Print(pins);
+			printf("%s\n\n", test);
+			cJSON *gpio18 = cJSON_GetObjectItem(pins, "18");
+			if(gpio18 != NULL){
+				test = cJSON_Print(gpio18);
+				printf("%s\n\n", test);
+				printf("request: %d\n", cJSON_GetObjectItem(gpio18, "request")->valueint);
+				printf("response: %d\n", cJSON_GetObjectItem(gpio18, "response")->valueint);
+				printf("state: %d\n", cJSON_GetObjectItem(gpio18, "state")->valueint);
+
+				int request = cJSON_GetObjectItem(gpio18, "request")->valueint;
+				int state = 1;
+				if(state != request){
+					uint8_t addr[6];
+					esp_efuse_mac_get_default(addr);
+					char mac[18];
+					snprintf(mac, sizeof(mac), "%02x-%02x-%02x-%02x-%02x-%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+					char url[68];
+					strcpy(url, WEB_URL);
+					strcat( url, mac);
+					strcat( url, "/pins/18/.json");
+					printf("%s\n", url);
+					push_listener(url, request);
+				}
+			}
+		}
 	}
 	cJSON_Delete(root);
 }
 
-void push_listener(){
+void push_listener(char *url, int state){
+    int ret, len;
+    char buf[512];
 
+    mbedtls_entropy_context entropy;
+    mbedtls_ctr_drbg_context ctr_drbg;
+    mbedtls_ssl_context ssl;
+    mbedtls_x509_crt cacert;
+    mbedtls_ssl_config conf;
+    mbedtls_net_context server_fd;
+
+    mbedtls_ssl_init(&ssl);
+    mbedtls_x509_crt_init(&cacert);
+    mbedtls_ctr_drbg_init(&ctr_drbg);
+    ESP_LOGI(TAG, "Seeding the random number generator");
+
+    mbedtls_ssl_config_init(&conf);
+//
+    mbedtls_entropy_init(&entropy);
+    if((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, NULL, 0)) != 0){
+        ESP_LOGE(TAG, "mbedtls_ctr_drbg_seed returned %d", ret);
+        abort();
+    }
+//
+//    ESP_LOGI(TAG, "Setting up the SSL/TLS structure...");
+    ret = mbedtls_ssl_config_defaults(&conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT);
+    if((ret) != 0){
+        ESP_LOGE(TAG, "mbedtls_ssl_config_defaults returned %d", ret);
+        goto exit;
+    }
+
+    /* MBEDTLS_SSL_VERIFY_OPTIONAL is bad for security, in this example it will print
+       a warning if CA verification fails but it will continue to connect.
+       You should consider using MBEDTLS_SSL_VERIFY_REQUIRED in your own code.
+    */
+//    mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
+    mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_NONE);
+    mbedtls_ssl_conf_ca_chain(&conf, &cacert, NULL);
+    mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
+	#ifdef CONFIG_MBEDTLS_DEBUG
+//		mbedtls_esp_enable_debug_log(&conf, 4);
+	#endif
+
+    if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0){
+        ESP_LOGE(TAG, "mbedtls_ssl_setup returned -0x%x\n\n", -ret);
+        goto exit;
+    }
+
+    while(1) {
+        /* Wait for the callback to set the CONNECTED_BIT in the
+           event group.
+        */
+        xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, false, true, portMAX_DELAY);
+//        ESP_LOGI(TAG, "Connected to AP");
+
+        mbedtls_net_init(&server_fd);
+
+        ESP_LOGI(TAG, "Connecting to %s:%s...", WEB_SERVER, WEB_PORT);
+
+        if ((ret = mbedtls_net_connect(&server_fd, WEB_SERVER, WEB_PORT, MBEDTLS_NET_PROTO_TCP)) != 0){
+            ESP_LOGE(TAG, "mbedtls_net_connect returned -%x", -ret);
+            goto exit;
+        }
+
+//        ESP_LOGI(TAG, "Connected.");
+//
+        mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
+
+//        ESP_LOGI(TAG, "Writing HTTP request...");
+        uint8_t addr[6];
+		esp_efuse_mac_get_default(addr);
+		char mac[18];
+		snprintf(mac, sizeof(mac), "%02x-%02x-%02x-%02x-%02x-%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+//		printf("%s\n", mac);
+
+		char data[20];
+		snprintf(data, sizeof(data), "{\"response\":%d}", state);
+		char *post = data;
+		char len_post[10];
+		snprintf(len_post, sizeof(len_post), "%d", sizeof(data) + 1);
+
+		char request[300] = "PATCH ";
+		strcat(request, url);
+		strcat(request, " HTTP/1.1CRLF");
+		strcat(request, "Host: linhomes-afa8a.firebaseio.comCRLF");
+//		strcat(request, "User-Agent: esp-idf/1.0 esp32\r\n");
+//		strcat(request, "Accept: application/json\r\n");
+//		strcat(request, "Content-Type: application/x-www-form-urlencoded\n");
+//		strcat(request, "Content-Length: 15\r\n");
+//		strcat(request, len_post);
+		//		strcat(request, "\r\n");
+		strcat(request, "Cache-Control: no-cacheCRLF");
+		strcat(request, "CRLF");
+		strcat(request, "'{\"response\":0}'");
+//		strcat(request, "\r\n");
+		REQUEST = request;
+
+		printf("%s\n", REQUEST2);
+		while((ret = mbedtls_ssl_write(&ssl, (const unsigned char *)REQUEST2, strlen(REQUEST2))) <= 0){
+			if(ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
+				ESP_LOGE(TAG, "mbedtls_ssl_write returned -0x%x", -ret);
+				goto exit;
+			}
+		}
+
+		len = ret;
+		ESP_LOGI(TAG, "%d bytes written", len);
+		ESP_LOGI(TAG, "Reading HTTP response...");
+		do{
+			len = sizeof(buf) - 1;
+			bzero(buf, sizeof(buf));
+			ret = mbedtls_ssl_read(&ssl, (unsigned char *)buf, len);
+//			printf("%s", buf);
+
+			if(ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE){
+				continue;
+			}
+			if(ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) {
+				ret = 0;
+				break;
+			}
+			if(ret < 0){
+				ESP_LOGE(TAG, "mbedtls_ssl_read returned -0x%x", -ret);
+				break;
+			}
+			if(ret == 0){
+				ESP_LOGI(TAG, "connection closed");
+				break;
+			}
+			mbedtls_printf("%s", buf);
+		} while(1);
+
+        mbedtls_ssl_close_notify(&ssl);
+
+    exit:
+        mbedtls_ssl_session_reset(&ssl);
+        mbedtls_net_free(&server_fd);
+
+        if(ret != 0){
+            mbedtls_strerror(ret, buf, 100);
+            ESP_LOGE(TAG, "Last error was: -0x%x - %s", -ret, buf);
+        }
+
+        for(int countdown = 1; countdown > 0; countdown--) {
+            ESP_LOGI(TAG, "%d...", countdown);
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+        }
+        ESP_LOGI(TAG, "Starting again!");
+        vTaskDelete(NULL);
+    }
 }
 
 void app_main(){
