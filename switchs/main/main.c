@@ -51,12 +51,11 @@
 
 /* The examples use simple WiFi configuration that you can set via
    'make menuconfig'.
-
    If you'd rather not, just change the below entries to strings with
    the config you want - ie #define EXAMPLE_WIFI_SSID "mywifissid"
 */
-#define EXAMPLE_WIFI_SSID ""//CONFIG_WIFI_SSID
-#define EXAMPLE_WIFI_PASS ""//CONFIG_WIFI_PASSWORD
+#define EXAMPLE_WIFI_SSID "Leon A.one"//CONFIG_WIFI_SSID
+#define EXAMPLE_WIFI_PASS "11330232"//CONFIG_WIFI_PASSWORD
 
 /* FreeRTOS event group to signal when we are connected & ready to make a request */
 static EventGroupHandle_t wifi_event_group;
@@ -67,36 +66,27 @@ static EventGroupHandle_t wifi_event_group;
 const int CONNECTED_BIT = BIT0;
 
 /* Constants that aren't configurable in menuconfig */
-#define WEB_SERVER ""
+#define WEB_SERVER "linhomes-afa8a.firebaseio.com"
 #define WEB_PORT "443"
-#define WEB_URL ""
+#define WEB_URL "https://linhomes-afa8a.firebaseio.com/switchs/"
 
 static const char *TAG = "example";
 
-static const char *REQUEST = "GET " WEB_URL " HTTP/1.0\r\n"
-    "Host: "WEB_SERVER"\r\n"
-    "User-Agent: esp-idf/1.0 esp32\r\n"
-    "\r\n";
-
-cJSON *root;
-
-void info_listener(char *buf);
+//char *WEB_URL = "https://linhomes-afa8a.firebaseio.com/switchs/";
+char *REQUEST = "";
+void info_listener(char argv[]);
 
 /* Root cert for howsmyssl.com, taken from server_root_cert.pem
-
    The PEM file was extracted from the output of this command:
    openssl s_client -showcerts -connect www.howsmyssl.com:443 </dev/null
-
    The CA root cert is the last cert given in the chain of certs.
-
    To embed it in the app binary, the PEM file is named
    in the component.mk COMPONENT_EMBED_TXTFILES variable.
 */
 //extern const uint8_t server_root_cert_pem_start[] asm("_binary_server_root_cert_pem_start");
-//extern const uint8_t server_root_cert_pem_end[] asm("_binary_server_root_cert_pem_end");
+//extern const uint8_t server_root_cert_pem_end[]   asm("_binary_server_root_cert_pem_end");
 
-static esp_err_t event_handler(void *ctx, system_event_t *event)
-{
+static esp_err_t event_handler(void *ctx, system_event_t *event){
     switch(event->event_id) {
     case SYSTEM_EVENT_STA_START:
         esp_wifi_connect();
@@ -116,8 +106,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
     return ESP_OK;
 }
 
-static void initialise_wifi(void)
-{
+static void initialise_wifi(void){
     tcpip_adapter_init();
     wifi_event_group = xEventGroupCreate();
     ESP_ERROR_CHECK( esp_event_loop_init(event_handler, NULL) );
@@ -136,217 +125,187 @@ static void initialise_wifi(void)
     ESP_ERROR_CHECK( esp_wifi_start() );
 }
 
-static void https_get_task(void *pvParameters)
-{
+static void https_get_task(void *pvParameters){
+    int ret, len;
     char buf[512];
-    int ret, /*flags, */len;
 
-//    mbedtls_entropy_context entropy;
-//    mbedtls_ctr_drbg_context ctr_drbg;
+    mbedtls_entropy_context entropy;
+    mbedtls_ctr_drbg_context ctr_drbg;
     mbedtls_ssl_context ssl;
-//    mbedtls_x509_crt cacert;
-//    mbedtls_ssl_config conf;
-//    mbedtls_net_context server_fd;
+    mbedtls_x509_crt cacert;
+    mbedtls_ssl_config conf;
+    mbedtls_net_context server_fd;
 
     mbedtls_ssl_init(&ssl);
-//    mbedtls_x509_crt_init(&cacert);
-//    mbedtls_ctr_drbg_init(&ctr_drbg);
-//    ESP_LOGI(TAG, "Seeding the random number generator");
-//
-//    mbedtls_ssl_config_init(&conf);
-//
-//    mbedtls_entropy_init(&entropy);
-//    if((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
-//                                    NULL, 0)) != 0)
-//    {
-//        ESP_LOGE(TAG, "mbedtls_ctr_drbg_seed returned %d", ret);
-//        abort();
-//    }
-//
-//    ESP_LOGI(TAG, "Loading the CA root certificate...");
-//
-//    ret = mbedtls_x509_crt_parse(&cacert, server_root_cert_pem_start,
-//                                 server_root_cert_pem_end-server_root_cert_pem_start);
-//
-//    if(ret < 0)
-//    {
-//        ESP_LOGE(TAG, "mbedtls_x509_crt_parse returned -0x%x\n\n", -ret);
-//        abort();
-//    }
-//
-//    ESP_LOGI(TAG, "Setting hostname for TLS session...");
-//
-//     /* Hostname set here should match CN in server certificate */
-//    if((ret = mbedtls_ssl_set_hostname(&ssl, WEB_SERVER)) != 0)
-//    {
-//        ESP_LOGE(TAG, "mbedtls_ssl_set_hostname returned -0x%x", -ret);
-//        abort();
-//    }
+    mbedtls_x509_crt_init(&cacert);
+    mbedtls_ctr_drbg_init(&ctr_drbg);
+    ESP_LOGI(TAG, "Seeding the random number generator");
 
-//    ESP_LOGI(TAG, "Setting up the SSL/TLS structure...");
+    mbedtls_ssl_config_init(&conf);
 //
-//    if((ret = mbedtls_ssl_config_defaults(&conf,
-//                                          MBEDTLS_SSL_IS_CLIENT,
-//                                          MBEDTLS_SSL_TRANSPORT_STREAM,
-//                                          MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
-//    {
-//        ESP_LOGE(TAG, "mbedtls_ssl_config_defaults returned %d", ret);
-//        goto exit;
-//    }
+    mbedtls_entropy_init(&entropy);
+    if((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, NULL, 0)) != 0){
+        ESP_LOGE(TAG, "mbedtls_ctr_drbg_seed returned %d", ret);
+        abort();
+    }
+//
+//    ESP_LOGI(TAG, "Setting up the SSL/TLS structure...");
+    ret = mbedtls_ssl_config_defaults(&conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT);
+    if((ret) != 0){
+        ESP_LOGE(TAG, "mbedtls_ssl_config_defaults returned %d", ret);
+        goto exit;
+    }
 
     /* MBEDTLS_SSL_VERIFY_OPTIONAL is bad for security, in this example it will print
        a warning if CA verification fails but it will continue to connect.
-
        You should consider using MBEDTLS_SSL_VERIFY_REQUIRED in your own code.
     */
 //    mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
-//    mbedtls_ssl_conf_ca_chain(&conf, &cacert, NULL);
-//    mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
-//#ifdef CONFIG_MBEDTLS_DEBUG
-//    mbedtls_esp_enable_debug_log(&conf, 4);
-//#endif
+    mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_NONE);
+    mbedtls_ssl_conf_ca_chain(&conf, &cacert, NULL);
+    mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
+	#ifdef CONFIG_MBEDTLS_DEBUG
+//		mbedtls_esp_enable_debug_log(&conf, 4);
+	#endif
 
-//    if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
-//    {
-//        ESP_LOGE(TAG, "mbedtls_ssl_setup returned -0x%x\n\n", -ret);
-//        goto exit;
-//    }
+    if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0){
+        ESP_LOGE(TAG, "mbedtls_ssl_setup returned -0x%x\n\n", -ret);
+        goto exit;
+    }
 
     while(1) {
         /* Wait for the callback to set the CONNECTED_BIT in the
            event group.
         */
         xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, false, true, portMAX_DELAY);
-        ESP_LOGI(TAG, "Connected to AP");
+//        ESP_LOGI(TAG, "Connected to AP");
 
-//        mbedtls_net_init(&server_fd);
-//
-//        ESP_LOGI(TAG, "Connecting to %s:%s...", WEB_SERVER, WEB_PORT);
-//
-//        if ((ret = mbedtls_net_connect(&server_fd, WEB_SERVER,
-//                                      WEB_PORT, MBEDTLS_NET_PROTO_TCP)) != 0)
-//        {
-//            ESP_LOGE(TAG, "mbedtls_net_connect returned -%x", -ret);
-//            goto exit;
-//        }
-//
-//        ESP_LOGI(TAG, "Connected.");
+        mbedtls_net_init(&server_fd);
 
-//        mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
-//
-//        ESP_LOGI(TAG, "Performing the SSL/TLS handshake...");
-//
-//        while ((ret = mbedtls_ssl_handshake(&ssl)) != 0)
-//        {
-//            if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
-//            {
-//                ESP_LOGE(TAG, "mbedtls_ssl_handshake returned -0x%x", -ret);
-//                goto exit;
-//            }
-//        }
-//
-//        ESP_LOGI(TAG, "Verifying peer X.509 certificate...");
-//
-//        if ((flags = mbedtls_ssl_get_verify_result(&ssl)) != 0)
-//        {
-//            /* In real life, we probably want to close connection if ret != 0 */
-//            ESP_LOGW(TAG, "Failed to verify peer certificate!");
-//            bzero(buf, sizeof(buf));
-//            mbedtls_x509_crt_verify_info(buf, sizeof(buf), "  ! ", flags);
-//            ESP_LOGW(TAG, "verification info: %s", buf);
-//        }
-//        else {
-//            ESP_LOGI(TAG, "Certificate verified.");
-//        }
+        ESP_LOGI(TAG, "Connecting to %s:%s...", WEB_SERVER, WEB_PORT);
 
-        ESP_LOGI(TAG, "Writing HTTP request...");
-
-        while((ret = mbedtls_ssl_write(&ssl, (const unsigned char *)REQUEST, strlen(REQUEST))) <= 0)
-        {
-            if(ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
-            {
-                ESP_LOGE(TAG, "mbedtls_ssl_write returned -0x%x", -ret);
-                goto exit;
-            }
+        if ((ret = mbedtls_net_connect(&server_fd, WEB_SERVER, WEB_PORT, MBEDTLS_NET_PROTO_TCP)) != 0){
+            ESP_LOGE(TAG, "mbedtls_net_connect returned -%x", -ret);
+            goto exit;
         }
 
-        len = ret;
-        ESP_LOGI(TAG, "%d bytes written", len);
-        ESP_LOGI(TAG, "Reading HTTP response...");
+//        ESP_LOGI(TAG, "Connected.");
+//
+        mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
 
-        do
-        {
-            len = sizeof(buf) - 1;
-            bzero(buf, sizeof(buf));
-            ret = mbedtls_ssl_read(&ssl, (unsigned char *)buf, len);
+//        ESP_LOGI(TAG, "Writing HTTP request...");
+		uint8_t addr[6];
+		esp_efuse_mac_get_default(addr);
+		char mac[18];
+		snprintf(mac, sizeof(mac), "%02x-%02x-%02x-%02x-%02x-%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+//		printf("%s\n", mac);
 
-            if(ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE)
-                continue;
+		char url[68];
+		strcpy(url, WEB_URL);
+		strcat( url, mac);
+		strcat( url, ".json"); // access_token will be required in the future
+		printf("%s\n", url);
 
-            if(ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) {
-                ret = 0;
-                break;
-            }
+		char request[100] = "GET ";
+		strcat(request, url);
+		strcat(request, " HTTP/1.0\r\n");
+		strcat(request, "Host: linhomes-afa8a.firebaseio.com\r\n");
+		strcat(request, "User-Agent: esp-idf/1.0 esp32\r\n");
+		strcat(request, "Accept: application/json\r\n");
+		strcat(request, "\r\n");
+		REQUEST = request;
+//		printf("%s\n", REQUEST);
+		while((ret = mbedtls_ssl_write(&ssl, (const unsigned char *)REQUEST, strlen(REQUEST))) <= 0){
+			if(ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
+				ESP_LOGE(TAG, "mbedtls_ssl_write returned -0x%x", -ret);
+				goto exit;
+			}
+		}
 
-            if(ret < 0)
-            {
-                ESP_LOGE(TAG, "mbedtls_ssl_read returned -0x%x", -ret);
-                break;
-            }
+		len = ret;
+		ESP_LOGI(TAG, "%d bytes written", len);
+		ESP_LOGI(TAG, "Reading HTTP response...");
+//		mbedtls_printf("%s", buf);
+		do{
+			len = sizeof(buf) - 1;
+			bzero(buf, sizeof(buf));
+			ret = mbedtls_ssl_read(&ssl, (unsigned char *)buf, len);
 
-            if(ret == 0)
-            {
-                ESP_LOGI(TAG, "connection closed");
-                break;
-            }
-
-            len = ret;
-            ESP_LOGI(TAG, "%d bytes read", len);
-            /* Print response directly to stdout as it is read */
-//            for(int i = 0; i < len; i++) {
-//                putchar(buf[i]);
-//            }
-            info_listener(buf);
-        } while(1);
+			if(ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE){
+				continue;
+			}
+			if(ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) {
+				ret = 0;
+				break;
+			}
+			if(ret < 0){
+				ESP_LOGE(TAG, "mbedtls_ssl_read returned -0x%x", -ret);
+				break;
+			}
+			if(ret == 0){
+				ESP_LOGI(TAG, "connection closed");
+				break;
+			}
+			info_listener(buf);
+		} while(1);
 
         mbedtls_ssl_close_notify(&ssl);
 
     exit:
         mbedtls_ssl_session_reset(&ssl);
-//        mbedtls_net_free(&server_fd);
+        mbedtls_net_free(&server_fd);
 
-        if(ret != 0)
-        {
+        if(ret != 0){
             mbedtls_strerror(ret, buf, 100);
             ESP_LOGE(TAG, "Last error was: -0x%x - %s", -ret, buf);
         }
 
-        for(int countdown = 10; countdown >= 0; countdown--) {
+        for(int countdown = 1; countdown > 0; countdown--) {
             ESP_LOGI(TAG, "%d...", countdown);
             vTaskDelay(1000 / portTICK_PERIOD_MS);
         }
         ESP_LOGI(TAG, "Starting again!");
+        vTaskDelete(NULL);
     }
 }
 
 void info_listener(char *buf){
-	printf("server return: %s", buf);
-	root = cJSON_Parse(buf);
-
-	if(root == NULL){
-        ESP_LOGW(TAG, "Response is not JSON format!");
-	} else{
-        ESP_LOGI(TAG, "JSON type: %d", root->type);
-		char * root_string = cJSON_Print(root);
-		printf("Parse JSON: %s", root_string);
-		free(root_string);
+//	ESP_LOGI(TAG, "\ninfo_listener----------->\n");
+//	mbedtls_printf("%s", buf);
+	const char needle[10] = "\r\n\r\n";
+	char *response;
+	response = strstr(buf, needle);
+	if(response == NULL){
+		response = buf;
 	}
-
+	cJSON *root = cJSON_Parse(response);
+	if(root == NULL){
+		ESP_LOGE(TAG, "\nNot JSON format----------->\n");
+	} else{
+		tcpip_adapter_ip_info_t ip;
+		memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
+		if (tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0) {
+//			ESP_LOGI(TAG, "~~~~~~~~~~~");
+//			ESP_LOGI(TAG, "IP:"IPSTR, IP2STR(&ip.ip));
+//			ESP_LOGI(TAG, "MASK:"IPSTR, IP2STR(&ip.netmask));
+//			ESP_LOGI(TAG, "GW:"IPSTR, IP2STR(&ip.gw));
+//			ESP_LOGI(TAG, "~~~~~~~~~~~");
+			char *ip_address = inet_ntoa(ip.ip);
+			cJSON_AddStringToObject(root, "wifi_ip", ip_address);
+		}
+//		ESP_LOGI(TAG, "type is: %d", root->type);
+		char *test = cJSON_Print(root);
+		ESP_LOGI(TAG, "\ncJSON_Print----------->\n");
+		printf("%s\n\n", test);
+	}
 	cJSON_Delete(root);
 }
 
-void app_main()
-{
+void push_listener(){
+
+}
+
+void app_main(){
     ESP_ERROR_CHECK( nvs_flash_init() );
     initialise_wifi();
     xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 5, NULL);
