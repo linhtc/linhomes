@@ -608,7 +608,8 @@ void info_listener(char *buf){
 //		}
 		ESP_LOGI(TAG, "type is: %d", root->type);
 		if(root->type == 2){ // not found in FireBase
-			push_device();
+//			push_device();
+			xTaskCreate(&push_device, "push_device", 8192, NULL, 5, NULL);
 		} else{
 			char *test = cJSON_Print(root);
 			ESP_LOGI(TAG, "\ncJSON_Print----------->\n");
@@ -926,7 +927,8 @@ void push_device(){
 		while((ret = mbedtls_ssl_write(&ssl, (const unsigned char *)REQUEST, strlen(REQUEST))) <= 0){
 			if(ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
 				ESP_LOGE(TAG, "mbedtls_ssl_write returned -0x%x", -ret);
-				return;
+//				return;
+				goto exit;
 			}
 		}
 
@@ -969,7 +971,8 @@ void push_device(){
             mbedtls_strerror(ret, buf, 100);
             ESP_LOGE(TAG, "Last error was: -0x%x - %s", -ret, buf);
         }
-        return;
+//        return;
+        vTaskDelete(NULL);
     }
 }
 
