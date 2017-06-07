@@ -48,7 +48,7 @@
 #include "mbedtls/certs.h"
 
 #include "cJSON.h"
-#include "driver/ledc.h"
+//#include "driver/ledc.h"
 //#include "freertos/queue.h"
 #include "driver/gpio.h"
 
@@ -76,11 +76,10 @@ const int CONNECTED_BIT = BIT0;
 #define WEB_PORT "443"
 #define WEB_URL "/switchs/"
 
-#define GPIO_INPUT_IO_0    18
-#define GPIO_OUTPUT_PIN_SEL  ((1<<GPIO_INPUT_IO_0))
+#define GPIO_OUTPUT_PIN_SEL  ((1<<GPIO_NUM_18))
 #define ESP_INTR_FLAG_DEFAULT 0
 
-gpio_num_t pin_nums;
+#define GPIO_INPUT_PIN_SEL  ((1<<GPIO_NUM_14))
 
 static const char *TAG = "example";
 
@@ -99,8 +98,10 @@ static const char *TAG = "example";
 //"{\"pwr\":\"off\"}";
 char *REQUEST = "";
 void info_listener(char argv[]);
-void push_listener(char argv[], int state);
-void push_device();
+
+xTaskHandle TaskHandle_get;
+xTaskHandle TaskHandle_push_i;
+xTaskHandle TaskHandle_push_d;
 
 /* Root cert for howsmyssl.com, taken from server_root_cert.pem
    The PEM file was extracted from the output of this command:
@@ -111,22 +112,6 @@ void push_device();
 */
 extern const uint8_t server_root_cert_pem_start[] asm("_binary_server_root_cert_pem_start");
 extern const uint8_t server_root_cert_pem_end[]   asm("_binary_server_root_cert_pem_end");
-
-static xQueueHandle gpio_evt_queue = NULL;
-
-static void IRAM_ATTR gpio_isr_handler(void* arg){
-    uint32_t gpio_num = (uint32_t) arg;
-    xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
-}
-
-static void gpio_task_example(void* arg){
-    uint32_t io_num;
-    for(;;) {
-        if(xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
-            printf("GPIO[%d] intr, val: %d\n", io_num, gpio_get_level(io_num));
-        }
-    }
-}
 
 static esp_err_t event_handler(void *ctx, system_event_t *event){
     switch(event->event_id) {
@@ -195,8 +180,7 @@ static void https_get_task(void *pvParameters){
 
     ESP_LOGI(TAG, "Loading the CA root certificate...");
 
-    ret = mbedtls_x509_crt_parse(&cacert, server_root_cert_pem_start,
-                                 server_root_cert_pem_end-server_root_cert_pem_start);
+    ret = mbedtls_x509_crt_parse(&cacert, server_root_cert_pem_start, server_root_cert_pem_end-server_root_cert_pem_start);
 
     if(ret < 0)
     {
@@ -228,9 +212,10 @@ static void https_get_task(void *pvParameters){
        a warning if CA verification fails but it will continue to connect.
        You should consider using MBEDTLS_SSL_VERIFY_REQUIRED in your own code.
     */
-    mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
+    mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_REQUIRED);
     mbedtls_ssl_conf_ca_chain(&conf, &cacert, NULL);
     mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
+	mbedtls_ssl_conf_read_timeout(&conf, 3000);
 #ifdef CONFIG_MBEDTLS_DEBUG
     mbedtls_esp_enable_debug_log(&conf, 4);
 #endif
@@ -262,12 +247,14 @@ static void https_get_task(void *pvParameters){
 
         ESP_LOGI(TAG, "Connected.");
 
-        mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
+//        mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
+        mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
 
         ESP_LOGI(TAG, "Performing the SSL/TLS handshake...");
 
         while ((ret = mbedtls_ssl_handshake(&ssl)) != 0)
         {
+            ESP_LOGE(TAG, "mbedtls_ssl_handshake returned -0x%x", -ret);
             if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
             {
                 ESP_LOGE(TAG, "mbedtls_ssl_handshake returned -0x%x", -ret);
@@ -312,9 +299,9 @@ static void https_get_task(void *pvParameters){
 		strcat(request, "User-Agent: esp-idf/1.0 esp32\r\n");
 		strcat(request, "Accept: application/json\r\n");
 		strcat(request, "\r\n");
-		REQUEST = request;
-		printf("%s\n", REQUEST);
-		while((ret = mbedtls_ssl_write(&ssl, (const unsigned char *)REQUEST, strlen(REQUEST))) <= 0){
+//		REQUEST = request;
+		printf("%s\n", request);
+		while((ret = mbedtls_ssl_write(&ssl, (const unsigned char *)request, strlen(request))) <= 0){
 			if(ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
 				ESP_LOGE(TAG, "mbedtls_ssl_write returned -0x%x", -ret);
 				goto exit;
@@ -363,16 +350,18 @@ static void https_get_task(void *pvParameters){
             ESP_LOGE(TAG, "Last error was: -0x%x - %s", -ret, buf);
         }
 
-        for(int countdown = 2; countdown >= 0; countdown--) {
-            ESP_LOGI(TAG, "%d...", countdown);
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
-        }
+        // delay 3 seconds
+//        for(int countdown = 2; countdown >= 0; countdown--) {
+//            ESP_LOGI(TAG, "%d...", countdown);
+//            vTaskDelay(1000 / portTICK_PERIOD_MS);
+//        }
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
         ESP_LOGI(TAG, "Starting again!");
-        vTaskDelete(NULL);
+//        vTaskDelete(TaskHandle_get);
     }
 }
 
-void push_listener(char *url, int state){
+static void push_listener(void *pvParameters){
     char buf[512];
     int ret, flags, len;
 
@@ -436,6 +425,7 @@ void push_listener(char *url, int state){
     mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
     mbedtls_ssl_conf_ca_chain(&conf, &cacert, NULL);
     mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
+	mbedtls_ssl_conf_read_timeout(&conf, 3000);
 #ifdef CONFIG_MBEDTLS_DEBUG
     mbedtls_esp_enable_debug_log(&conf, 4);
 #endif
@@ -467,7 +457,8 @@ void push_listener(char *url, int state){
 
         ESP_LOGI(TAG, "Connected.");
 
-        mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
+        //        mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
+		mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
 
         ESP_LOGI(TAG, "Performing the SSL/TLS handshake...");
 
@@ -496,6 +487,22 @@ void push_listener(char *url, int state){
 
         ESP_LOGI(TAG, "Writing HTTP request...");
 
+    	int pin = (int)pvParameters;
+    	int state = gpio_get_level(pin - 4);
+    	uint8_t addr[6];
+    	esp_efuse_mac_get_default(addr);
+    	char mac[18];
+    	snprintf(mac, sizeof(mac), "%02x-%02x-%02x-%02x-%02x-%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+    	char spin[11];
+    	snprintf(spin, sizeof(spin), "%d", pin);
+    	char url[68];
+    	strcpy(url, WEB_URL);
+    	strcat( url, mac);
+    	strcat( url, "/ps/");
+    	strcat( url, spin);
+    	strcat( url, "/.json");
+    	printf("%s\n", url);
+
 		char data[26];
 		snprintf(data, sizeof(data), "{\"res\":%d, \"sta\":1}", state);
 		char *post = data;
@@ -509,31 +516,17 @@ void push_listener(char *url, int state){
 		strcat(request, "Connection: close\r\n");
 		strcat(request, "Host: linhomes-afa8a.firebaseio.com\r\n");
 		strcat(request, "Content-Type: application/json\r\n");
-//		strcat(request, "Content-Length: 14");
 		strcat(request, "Content-Length: ");
 		strcat(request, len_post);
 		strcat(request, "\r\n");
 		strcat(request, "\r\n");
-//		strcat(request, "{\"pwr\":\"off\"}");
 		strcat(request, post);
-//		strcat(request, "\r\n");
-		REQUEST = request;
-
-//		char *REQUEST2 = "PUT " WEB_URL " HTTP/1.0\r\n"
-//		"User-Agent: esp-idf/1.0 esp32\r\n"
-//		"Connection: close\r\n" //general header
-//		"Host: "WEB_SERVER"\r\n" //request header
-//		"Content-Type: application/json\r\n" //entity header
-//		"Content-Length: 13\r\n" //entity header
-//		"\r\n"
-//		"{\"pwr\":\"off\"}";
-
-		printf("%s\n", REQUEST);
-		while((ret = mbedtls_ssl_write(&ssl, (const unsigned char *)REQUEST, strlen(REQUEST))) <= 0){
+//		REQUEST = request;
+		printf("%s\n", request);
+		while((ret = mbedtls_ssl_write(&ssl, (const unsigned char *)request, strlen(request))) <= 0){
 			if(ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
 				ESP_LOGE(TAG, "mbedtls_ssl_write returned -0x%x", -ret);
-//				goto exit;
-				return;
+				goto exit;
 			}
 		}
 
@@ -571,166 +564,23 @@ void push_listener(char *url, int state){
         mbedtls_ssl_session_reset(&ssl);
         mbedtls_net_free(&server_fd);
 
-        if(ret != 0)
-        {
-            mbedtls_strerror(ret, buf, 100);
-            ESP_LOGE(TAG, "Last error was: -0x%x - %s", -ret, buf);
-        }
-        return;
-
+//        if(ret != 0)
+//        {
+//            mbedtls_strerror(ret, buf, 100);
+//            ESP_LOGE(TAG, "Last error was: -0x%x - %s", -ret, buf);
+//        }
+//        return;
+//    	vTaskDelete(NULL);
 //        for(int countdown = 10; countdown >= 0; countdown--) {
 //            ESP_LOGI(TAG, "%d...", countdown);
 //            vTaskDelay(1000 / portTICK_PERIOD_MS);
 //        }
 //        ESP_LOGI(TAG, "Starting again!");
-//        vTaskDelete(NULL);
+        vTaskDelete(TaskHandle_push_i);
     }
 }
 
-void info_listener(char *buf){
-//	ESP_LOGI(TAG, "\ninfo_listener----------->\n");
-//	mbedtls_printf("%s", buf);
-	const char needle[10] = "\r\n\r\n";
-	char *response;
-	response = strstr(buf, needle);
-	if(response == NULL){
-		response = buf;
-	}
-	cJSON *root = cJSON_Parse(response);
-	if(root == NULL){
-		ESP_LOGE(TAG, "\nNot JSON format----------->\n");
-	} else{
-//		tcpip_adapter_ip_info_t ip;
-//		memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
-//		if (tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0) {
-//			char *ip_address = inet_ntoa(ip.ip);
-//			cJSON_AddStringToObject(root, "wi", ip_address);
-//		}
-		ESP_LOGI(TAG, "type is: %d", root->type);
-		if(root->type == 2){ // not found in FireBase
-//			push_device();
-			xTaskCreate(&push_device, "push_device", 8192, NULL, 5, NULL);
-		} else{
-			char *test = cJSON_Print(root);
-			ESP_LOGI(TAG, "\ncJSON_Print----------->\n");
-			printf("%s\n\n", test);
-			cJSON *pins = cJSON_GetObjectItem(root, "ps");
-			if(pins != NULL){
-				cJSON *gpio16 = cJSON_GetObjectItem(pins, "16");
-				if(gpio16 != NULL){
-					cJSON *pin16_request = cJSON_GetObjectItem(gpio16, "req");
-					cJSON *pin16_response = cJSON_GetObjectItem(gpio16, "res");
-					cJSON *pin16_state = cJSON_GetObjectItem(gpio16, "sta");
-					if(pin16_request != NULL && pin16_response != NULL && pin16_state != NULL){
-						if((pin16_request->valueint != pin16_response->valueint) || pin16_state->valueint != 1){
-							if(pin16_request->valueint > 0){
-								gpio_set_level(GPIO_NUM_16, 1);
-								ESP_LOGI(TAG, "\n Turn on GPIO_NUM_16 \n");
-							} else{
-								gpio_set_level(GPIO_NUM_16, 0);
-								ESP_LOGI(TAG, "\n Turn off GPIO_NUM_16 \n");
-							}
-							uint8_t addr[6];
-							esp_efuse_mac_get_default(addr);
-							char mac[18];
-							snprintf(mac, sizeof(mac), "%02x-%02x-%02x-%02x-%02x-%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
-							char url[68];
-							strcpy(url, WEB_URL);
-							strcat( url, mac);
-							strcat( url, "/ps/16/.json");
-							printf("%s\n", url);
-							push_listener(url, pin16_request->valueint);
-						}
-					}
-				}
-				cJSON *gpio17 = cJSON_GetObjectItem(pins, "17");
-				if(gpio17 != NULL){
-					cJSON *gpio17_request = cJSON_GetObjectItem(gpio17, "req");
-					cJSON *gpio17_response = cJSON_GetObjectItem(gpio17, "res");
-					cJSON *gpio17_state = cJSON_GetObjectItem(gpio17, "sta");
-					if(gpio17_request != NULL && gpio17_response != NULL && gpio17_state != NULL){
-						if((gpio17_request->valueint != gpio17_response->valueint) || gpio17_state->valueint != 1){
-							if(gpio17_request->valueint > 0){
-								gpio_set_level(GPIO_NUM_17, 1);
-								ESP_LOGI(TAG, "\n Turn on GPIO_NUM_17 \n");
-							} else{
-								gpio_set_level(GPIO_NUM_17, 0);
-								ESP_LOGI(TAG, "\n Turn off GPIO_NUM_17 \n");
-							}
-							uint8_t addr[6];
-							esp_efuse_mac_get_default(addr);
-							char mac[18];
-							snprintf(mac, sizeof(mac), "%02x-%02x-%02x-%02x-%02x-%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
-							char url[68];
-							strcpy(url, WEB_URL);
-							strcat( url, mac);
-							strcat( url, "/ps/17/.json");
-							printf("%s\n", url);
-							push_listener(url, gpio17_request->valueint);
-						}
-					}
-				}
-				cJSON *gpio18 = cJSON_GetObjectItem(pins, "18");
-				if(gpio18 != NULL){
-					cJSON *pin18_request = cJSON_GetObjectItem(gpio18, "req");
-					cJSON *pin18_response = cJSON_GetObjectItem(gpio18, "res");
-					cJSON *pin18_state = cJSON_GetObjectItem(gpio18, "sta");
-					if(pin18_request != NULL && pin18_response != NULL && pin18_state != NULL){
-						if((pin18_request->valueint != pin18_response->valueint) || pin18_state->valueint != 1){
-							if(pin18_request->valueint > 0){
-								gpio_set_level(GPIO_NUM_18, 1);
-								ESP_LOGI(TAG, "\n Turn on GPIO_NUM_18 \n");
-							} else{
-								gpio_set_level(GPIO_NUM_18, 0);
-								ESP_LOGI(TAG, "\n Turn off GPIO_NUM_18 \n");
-							}
-							uint8_t addr[6];
-							esp_efuse_mac_get_default(addr);
-							char mac[18];
-							snprintf(mac, sizeof(mac), "%02x-%02x-%02x-%02x-%02x-%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
-							char url[68];
-							strcpy(url, WEB_URL);
-							strcat( url, mac);
-							strcat( url, "/ps/18/.json");
-							printf("%s\n", url);
-							push_listener(url, pin18_request->valueint);
-						}
-					}
-				}
-				cJSON *gpio19 = cJSON_GetObjectItem(pins, "19");
-				if(gpio19 != NULL){
-					cJSON *gpio19_request = cJSON_GetObjectItem(gpio19, "req");
-					cJSON *gpio19_response = cJSON_GetObjectItem(gpio19, "res");
-					cJSON *gpio19_state = cJSON_GetObjectItem(gpio19, "sta");
-					if(gpio19_request != NULL && gpio19_response != NULL && gpio19_state != NULL){
-						if((gpio19_request->valueint != gpio19_response->valueint) || gpio19_state->valueint != 1){
-							if(gpio19_request->valueint > 0){
-								gpio_set_level(GPIO_NUM_19, 1);
-								ESP_LOGI(TAG, "\n Turn on GPIO_NUM_19 \n");
-							} else{
-								gpio_set_level(GPIO_NUM_19, 0);
-								ESP_LOGI(TAG, "\n Turn off GPIO_NUM_19 \n");
-							}
-							uint8_t addr[6];
-							esp_efuse_mac_get_default(addr);
-							char mac[18];
-							snprintf(mac, sizeof(mac), "%02x-%02x-%02x-%02x-%02x-%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
-							char url[68];
-							strcpy(url, WEB_URL);
-							strcat( url, mac);
-							strcat( url, "/ps/19/.json");
-							printf("%s\n", url);
-							push_listener(url, gpio19_request->valueint);
-						}
-					}
-				}
-			}
-		}
-	}
-	cJSON_Delete(root);
-}
-
-void push_device(){
+static void push_device(){
     char buf[512];
     int ret, flags, len;
 
@@ -794,6 +644,7 @@ void push_device(){
     mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
     mbedtls_ssl_conf_ca_chain(&conf, &cacert, NULL);
     mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
+	mbedtls_ssl_conf_read_timeout(&conf, 3000);
 #ifdef CONFIG_MBEDTLS_DEBUG
     mbedtls_esp_enable_debug_log(&conf, 4);
 #endif
@@ -825,7 +676,8 @@ void push_device(){
 
         ESP_LOGI(TAG, "Connected.");
 
-        mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
+        //        mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
+		mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
 
         ESP_LOGI(TAG, "Performing the SSL/TLS handshake...");
 
@@ -972,45 +824,168 @@ void push_device(){
             ESP_LOGE(TAG, "Last error was: -0x%x - %s", -ret, buf);
         }
 //        return;
-        vTaskDelete(NULL);
+        vTaskDelete(TaskHandle_push_d);
     }
+}
+
+
+void info_listener(char *buf){
+//	ESP_LOGI(TAG, "\ninfo_listener----------->\n");
+//	mbedtls_printf("%s", buf);
+	const char needle[10] = "\r\n\r\n";
+	char *response;
+	response = strstr(buf, needle);
+	if(response == NULL){
+		response = buf;
+	}
+	cJSON *root = cJSON_Parse(response);
+	if(root == NULL){
+		ESP_LOGE(TAG, "\nNot JSON format----------->\n");
+	} else{
+//		tcpip_adapter_ip_info_t ip;
+//		memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
+//		if (tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0) {
+//			char *ip_address = inet_ntoa(ip.ip);
+//			cJSON_AddStringToObject(root, "wi", ip_address);
+//		}
+		ESP_LOGI(TAG, "type is: %d", root->type);
+		if(root->type == 2){ // not found in FireBase
+//			push_device();
+			xTaskCreate(&push_device, "push_device", 8192, NULL, 3, &TaskHandle_push_d);
+		} else{
+			char *test = cJSON_Print(root);
+			ESP_LOGI(TAG, "\ncJSON_Print----------->\n");
+			printf("%s\n\n", test);
+			cJSON *pins = cJSON_GetObjectItem(root, "ps");
+			if(pins != NULL){
+//				cJSON *gpio16 = cJSON_GetObjectItem(pins, "16");
+//				if(gpio16 != NULL){
+//					cJSON *pin16_request = cJSON_GetObjectItem(gpio16, "req");
+//					cJSON *pin16_response = cJSON_GetObjectItem(gpio16, "res");
+//					cJSON *pin16_state = cJSON_GetObjectItem(gpio16, "sta");
+//					int curr12_state = gpio_get_level(GPIO_NUM_12);
+//					if(pin16_request != NULL && pin16_response != NULL && pin16_state != NULL){
+//						if(pin16_request->valueint != curr12_state || pin16_state->valueint != 1){
+//							if(pin16_request->valueint > 0){
+//								gpio_set_level(GPIO_NUM_16, 1);
+//								ESP_LOGI(TAG, "\n Turn on GPIO_NUM_16 \n");
+//							} else{
+//								gpio_set_level(GPIO_NUM_16, 0);
+//								ESP_LOGI(TAG, "\n Turn off GPIO_NUM_16 \n");
+//							}
+//							uint8_t addr[6];
+//							esp_efuse_mac_get_default(addr);
+//							char mac[18];
+//							snprintf(mac, sizeof(mac), "%02x-%02x-%02x-%02x-%02x-%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+//							char url[68];
+//							strcpy(url, WEB_URL);
+//							strcat( url, mac);
+//							strcat( url, "/ps/16/.json");
+//							printf("%s\n", url);
+//							push_listener(url, pin16_request->valueint);
+//						}
+//					}
+//				}
+//				cJSON *gpio17 = cJSON_GetObjectItem(pins, "17");
+//				if(gpio17 != NULL){
+//					cJSON *gpio17_request = cJSON_GetObjectItem(gpio17, "req");
+//					cJSON *gpio17_response = cJSON_GetObjectItem(gpio17, "res");
+//					cJSON *gpio17_state = cJSON_GetObjectItem(gpio17, "sta");
+//					int curr13_state = gpio_get_level(GPIO_NUM_13);
+//					if(gpio17_request != NULL && gpio17_response != NULL && gpio17_state != NULL){
+//						if(gpio17_request->valueint != curr13_state || gpio17_state->valueint != 1){
+//							if(gpio17_request->valueint > 0){
+//								gpio_set_level(GPIO_NUM_17, 1);
+//								ESP_LOGI(TAG, "\n Turn on GPIO_NUM_17 \n");
+//							} else{
+//								gpio_set_level(GPIO_NUM_17, 0);
+//								ESP_LOGI(TAG, "\n Turn off GPIO_NUM_17 \n");
+//							}
+//							uint8_t addr[6];
+//							esp_efuse_mac_get_default(addr);
+//							char mac[18];
+//							snprintf(mac, sizeof(mac), "%02x-%02x-%02x-%02x-%02x-%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+//							char url[68];
+//							strcpy(url, WEB_URL);
+//							strcat( url, mac);
+//							strcat( url, "/ps/17/.json");
+//							printf("%s\n", url);
+//							push_listener(url, gpio17_request->valueint);
+//						}
+//					}
+//				}
+				cJSON *gpio18 = cJSON_GetObjectItem(pins, "18");
+				if(gpio18 != NULL){
+					cJSON *pin18_request = cJSON_GetObjectItem(gpio18, "req");
+					cJSON *pin18_response = cJSON_GetObjectItem(gpio18, "res");
+					cJSON *pin18_state = cJSON_GetObjectItem(gpio18, "sta");
+					int curr14_state = gpio_get_level(GPIO_NUM_14);
+					if(pin18_request != NULL && pin18_response != NULL && pin18_state != NULL){
+						if(pin18_request->valueint != curr14_state || pin18_state->valueint != 1){
+							ESP_LOGI(TAG, "\n curr14_state %d \n", curr14_state);
+							if(pin18_request->valueint > 0){
+								gpio_set_level(GPIO_NUM_18, 1);
+								ESP_LOGI(TAG, "\n Turn on GPIO_NUM_18 \n");
+							} else{
+								gpio_set_level(GPIO_NUM_18, 0);
+								ESP_LOGI(TAG, "\n Turn off GPIO_NUM_18 \n");
+							}
+//							xTaskCreate(&push_listener, "push_listener", 8192, (void*)18, 4, &TaskHandle_push_i);
+						}
+					}
+				}
+//				cJSON *gpio19 = cJSON_GetObjectItem(pins, "19");
+//				if(gpio19 != NULL){
+//					cJSON *gpio19_request = cJSON_GetObjectItem(gpio19, "req");
+//					cJSON *gpio19_response = cJSON_GetObjectItem(gpio19, "res");
+//					cJSON *gpio19_state = cJSON_GetObjectItem(gpio19, "sta");
+//					int curr15_state = gpio_get_level(GPIO_NUM_15);
+//					if(gpio19_request != NULL && gpio19_response != NULL && gpio19_state != NULL){
+//						if(gpio19_request->valueint != curr15_state || gpio19_state->valueint != 1){
+//							if(gpio19_request->valueint > 0){
+//								gpio_set_level(GPIO_NUM_19, 1);
+//								ESP_LOGI(TAG, "\n Turn on GPIO_NUM_19 \n");
+//							} else{
+//								gpio_set_level(GPIO_NUM_19, 0);
+//								ESP_LOGI(TAG, "\n Turn off GPIO_NUM_19 \n");
+//							}
+//							uint8_t addr[6];
+//							esp_efuse_mac_get_default(addr);
+//							char mac[18];
+//							snprintf(mac, sizeof(mac), "%02x-%02x-%02x-%02x-%02x-%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+//							char url[68];
+//							strcpy(url, WEB_URL);
+//							strcat( url, mac);
+//							strcat( url, "/ps/19/.json");
+//							printf("%s\n", url);
+//							push_listener(url, gpio19_request->valueint);
+//						}
+//					}
+//				}
+			}
+		}
+	}
+	cJSON_Delete(root);
 }
 
 void app_main(){
     ESP_ERROR_CHECK( nvs_flash_init() );
     initialise_wifi();
-    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 5, NULL);
+    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 3, &TaskHandle_get); //NULL
 
-    gpio_config_t io_conf;
-	//disable interrupt
-	io_conf.intr_type = GPIO_PIN_INTR_ANYEGDE;
-	//set as output mode
-	io_conf.mode = GPIO_MODE_OUTPUT;
-	//bit mask of the pins that you want to set,e.g.GPIO18/19
-	io_conf.pin_bit_mask = GPIO_OUTPUT_PIN_SEL;
-	//disable pull-down mode
-	io_conf.pull_down_en = 1;
-	//disable pull-up mode
-	io_conf.pull_up_en = 1;
-	//configure GPIO with the given settings
-	gpio_config(&io_conf);
+//	gpio_set_direction(GPIO_NUM_12, GPIO_MODE_INPUT);
+//	gpio_set_direction(GPIO_NUM_13, GPIO_MODE_INPUT);
+	gpio_set_direction(GPIO_NUM_14, GPIO_MODE_INPUT);
+//	gpio_set_direction(GPIO_NUM_15, GPIO_MODE_INPUT);
 
-	//change gpio intrrupt type for one pin
-	gpio_set_intr_type(GPIO_NUM_18, GPIO_INTR_ANYEDGE);
+//	gpio_set_level(GPIO_NUM_12, 0);
+//	gpio_set_level(GPIO_NUM_13, 0);
+//	gpio_set_level(GPIO_NUM_14, 0);
+//	gpio_set_level(GPIO_NUM_15, 0);
 
-	//create a queue to handle gpio event from isr
-	gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
-	//start gpio task
-	xTaskCreate(gpio_task_example, "gpio_task_example", 2048, NULL, 10, NULL);
-
-	//install gpio isr service
-	gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
-	//hook isr handler for specific gpio pin
-	gpio_isr_handler_add(GPIO_NUM_18, gpio_isr_handler, (void*) GPIO_NUM_18);
-
-//	gpio_set_level(GPIO_NUM_18, 1);
-//
-//	int state = gpio_get_level(GPIO_NUM_18);
-//	ESP_LOGW(TAG, "\n GPIO18: %d \n", state);
+//	gpio_set_direction(GPIO_NUM_16, GPIO_MODE_OUTPUT);
+//	gpio_set_direction(GPIO_NUM_17, GPIO_MODE_OUTPUT);
+	gpio_set_direction(GPIO_NUM_18, GPIO_MODE_OUTPUT);
+//	gpio_set_direction(GPIO_NUM_19, GPIO_MODE_OUTPUT);
 
 }
