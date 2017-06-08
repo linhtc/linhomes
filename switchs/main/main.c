@@ -52,6 +52,10 @@
 //#include "freertos/queue.h"
 #include "driver/gpio.h"
 
+#include "esp_partition.h"
+//#include "nvs_flash.h"
+#include "nvs.h"
+
 /* The examples use simple WiFi configuration that you can set via
    'make menuconfig'.
    If you'd rather not, just change the below entries to strings with
@@ -362,6 +366,8 @@ static void https_get_task(void *pvParameters){
 }
 
 static void push_listener(void *pvParameters){
+    vTaskDelete(TaskHandle_push_i);
+	return;
     char buf[512];
     int ret, flags, len;
 
@@ -828,6 +834,53 @@ static void push_device(){
     }
 }
 
+static int handle_nvs(char *key, int val, int flag){
+	esp_err_t err;
+	nvs_handle my_handle;
+	int32_t status = -1;
+	err = nvs_open("storage", NVS_READWRITE, &my_handle);
+	if (err != ESP_OK) {
+		printf("Error (%d) opening NVS handle!\n", err);
+	} else {
+		printf("Done\n");
+
+		// Write
+		if(flag == 1){
+			// Write
+			printf("Updating restart counter in NVS ... ");
+			err = nvs_set_i32(my_handle, key, val);
+			printf((err != ESP_OK) ? "Failed!\n" : "Done\n");
+
+			// Commit written value.
+			// After setting any values, nvs_commit() must be called to ensure changes are written
+			// to flash storage. Implementations may write to storage at other times,
+			// but this is not guaranteed.
+			printf("Committing updates in NVS ... ");
+			err = nvs_commit(my_handle);
+			printf((err != ESP_OK) ? "Failed!\n" : "Done\n");
+			status = err;
+		} else{ // Read
+			printf("Reading restart counter from NVS ... ");
+//			int32_t nvs_val = 0; // value will default to 0, if not set yet in NVS
+			err = nvs_get_i32(my_handle, key, &status);
+			switch (err) {
+				case ESP_OK:
+					printf("Done\n");
+					printf("Key %s = %d\n", key, status);
+					break;
+				case ESP_ERR_NVS_NOT_FOUND:
+					printf("The value is not initialized yet!\n");
+					break;
+				default :
+					printf("Error (%d) reading!\n", err);
+			}
+		}
+
+		// Close
+		nvs_close(my_handle);
+	}
+	return status;
+}
 
 void info_listener(char *buf){
 //	ESP_LOGI(TAG, "\ninfo_listener----------->\n");
@@ -930,7 +983,10 @@ void info_listener(char *buf){
 								gpio_set_level(GPIO_NUM_18, 0);
 								ESP_LOGI(TAG, "\n Turn off GPIO_NUM_18 \n");
 							}
-//							xTaskCreate(&push_listener, "push_listener", 8192, (void*)18, 4, &TaskHandle_push_i);
+
+							if(handle_nvs((char *)GPIO_NUM_18, pin18_request->valueint, 1) == ESP_OK){
+								 xTaskCreate(&push_listener, "push_listener", 8192, (void*)18, 4, &TaskHandle_push_i);
+							}
 						}
 					}
 				}
@@ -969,23 +1025,38 @@ void info_listener(char *buf){
 }
 
 void app_main(){
-    ESP_ERROR_CHECK( nvs_flash_init() );
+	//	gpio_set_direction(GPIO_NUM_12, GPIO_MODE_INPUT);
+	//	gpio_set_direction(GPIO_NUM_13, GPIO_MODE_INPUT);
+		gpio_set_direction(GPIO_NUM_14, GPIO_MODE_INPUT);
+	//	gpio_set_direction(GPIO_NUM_15, GPIO_MODE_INPUT);
+
+	//	gpio_set_level(GPIO_NUM_12, 0);
+	//	gpio_set_level(GPIO_NUM_13, 0);
+	//	gpio_set_level(GPIO_NUM_14, 0);
+	//	gpio_set_level(GPIO_NUM_15, 0);
+
+	//	gpio_set_direction(GPIO_NUM_16, GPIO_MODE_OUTPUT);
+	//	gpio_set_direction(GPIO_NUM_17, GPIO_MODE_OUTPUT);
+		gpio_set_direction(GPIO_NUM_18, GPIO_MODE_OUTPUT);
+	//	gpio_set_direction(GPIO_NUM_19, GPIO_MODE_OUTPUT);
+//    ESP_ERROR_CHECK( nvs_flash_init() );
+
+	esp_err_t err = nvs_flash_init();
+	if (err == ESP_ERR_NVS_NO_FREE_PAGES) {
+		// NVS partition was truncated and needs to be erased
+		const esp_partition_t* nvs_partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_NVS, NULL);
+		assert(nvs_partition && "partition table must have an NVS partition");
+		ESP_ERROR_CHECK( esp_partition_erase_range(nvs_partition, 0, nvs_partition->size) );
+		// Retry nvs_flash_init
+		err = nvs_flash_init();
+	}
+
+	ESP_ERROR_CHECK( err );
+
+	int val18 = handle_nvs((char *)GPIO_NUM_18, 0, 0);
+	gpio_set_level(GPIO_NUM_18, val18);
+
     initialise_wifi();
     xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 3, &TaskHandle_get); //NULL
-
-//	gpio_set_direction(GPIO_NUM_12, GPIO_MODE_INPUT);
-//	gpio_set_direction(GPIO_NUM_13, GPIO_MODE_INPUT);
-	gpio_set_direction(GPIO_NUM_14, GPIO_MODE_INPUT);
-//	gpio_set_direction(GPIO_NUM_15, GPIO_MODE_INPUT);
-
-//	gpio_set_level(GPIO_NUM_12, 0);
-//	gpio_set_level(GPIO_NUM_13, 0);
-//	gpio_set_level(GPIO_NUM_14, 0);
-//	gpio_set_level(GPIO_NUM_15, 0);
-
-//	gpio_set_direction(GPIO_NUM_16, GPIO_MODE_OUTPUT);
-//	gpio_set_direction(GPIO_NUM_17, GPIO_MODE_OUTPUT);
-	gpio_set_direction(GPIO_NUM_18, GPIO_MODE_OUTPUT);
-//	gpio_set_direction(GPIO_NUM_19, GPIO_MODE_OUTPUT);
 
 }
