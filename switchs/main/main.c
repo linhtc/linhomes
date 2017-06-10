@@ -65,8 +65,8 @@
 */
 //char *EXAMPLE_WIFI_SSID = "Leon A.one";//CONFIG_WIFI_SSID MOBILE STAR WiFi
 //char *EXAMPLE_WIFI_PASS = "11330232";//CONFIG_WIFI_PASSWORD mobiist@r2017
-unsigned char uc_ssid[] = "Leon A.one";
-unsigned char uc_pw[] = "11330232";
+unsigned char uc_ssid[32] = "";
+unsigned char uc_pw[64] = "";
 
 /* FreeRTOS event group to signal when we are connected & ready to make a request */
 static EventGroupHandle_t wifi_event_group;
@@ -116,6 +116,8 @@ xTaskHandle TaskHandle_ctrl_17;
 xTaskHandle TaskHandle_ctrl_18;
 xTaskHandle TaskHandle_ctrl_19;
 
+//WebSocket_frame_f __ws_frame_f;
+
 /* Root cert for howsmyssl.com, taken from server_root_cert.pem
    The PEM file was extracted from the output of this command:
    openssl s_client -showcerts -connect www.howsmyssl.com:443 </dev/null
@@ -143,7 +145,6 @@ static int handle_nvs(const char *key, int val, int flag){
 		// Write
 		if(flag == 1){
 			// Write
-			printf("Updating restart counter in NVS ... ");
 			err = nvs_set_i32(my_handle, key, val);
 			printf((err != ESP_OK) ? "Failed!\n" : "Done\n");
 
@@ -179,6 +180,52 @@ static int handle_nvs(const char *key, int val, int flag){
 	return status;
 }
 
+static void handle_snvs(const char *key, char *val, int flag){
+	esp_err_t err;
+	nvs_handle my_handle;
+	err = nvs_open("storage", NVS_READWRITE, &my_handle);
+	if (err != ESP_OK) {
+		printf("Error (%d) opening NVS handle!\n", err);
+	} else {
+		printf("Done\n");
+		// Write
+		if(flag == 1){
+			// Write
+			err = nvs_set_str(my_handle, key, val);
+			err = nvs_commit(my_handle);
+			printf((err != ESP_OK) ? "Failed!\n" : "Done\n");
+		} else{ // Read
+			size_t size = 32;
+			malloc(size);
+			err = nvs_get_str(my_handle, key, val, &size);
+			ESP_LOGI(TAG, "\ncJSON_Print-----------> %d\n", err);
+			switch (err) {
+				case ESP_OK:
+					printf("NVS read\n");
+					printf("Key %s = %s\n", key, val);
+					break;
+				case ESP_ERR_NVS_NOT_FOUND:
+					printf("The value is not initialized yet!\n");
+					break;
+				case ESP_ERR_NVS_INVALID_HANDLE:
+					printf("ESP_ERR_NVS_INVALID_HANDLE %d!\n", err);
+					break;
+				case ESP_ERR_NVS_INVALID_NAME:
+					printf("ESP_ERR_NVS_INVALID_NAME %d!\n", err);
+					break;
+				case ESP_ERR_NVS_INVALID_LENGTH:
+					printf("ESP_ERR_NVS_INVALID_LENGTH %d!\n", err);
+					break;
+				default :
+					printf("Error (%d) reading!\n", err);
+			}
+		}
+
+		// Close
+		nvs_close(my_handle);
+	}
+}
+
 static void IRAM_ATTR gpio_isr_handler(void* arg){
     uint32_t gpio_num = (uint32_t) arg;
     xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
@@ -189,9 +236,11 @@ static void gpio_task_example(void* arg){
     for(;;) {
         if(xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
             printf("GPIO[%d] intr, val: %d\n", io_num, gpio_get_level(io_num));
-            if(io_num == GPIO_NUM_13){
+            if(io_num == GPIO_NUM_14){
             	if(handle_nvs("w_mode", 1, 1) == ESP_OK){ // keo chan 13 len cao thi switch sang mode ap
+            		gpio_isr_handler_remove(GPIO_NUM_14);
 					esp_restart();
+            		vTaskDelete(NULL);
 				}
             }
         }
@@ -199,33 +248,37 @@ static void gpio_task_example(void* arg){
 }
 
 static esp_err_t event_handler(void *ctx, system_event_t *event){
-//	ESP_LOGI(TAG, "\n event_id: %d \n", event->event_id);
     switch(event->event_id) {
-    case SYSTEM_EVENT_STA_START:
-        esp_wifi_connect();
-        break;
-    case SYSTEM_EVENT_STA_GOT_IP:
-//    	count_time = 0;
-		handle_nvs("w_mode", 0, 1);
-        xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
-        break;
-    case SYSTEM_EVENT_STA_DISCONNECTED:
-        /* This is a workaround as ESP32 WiFi libs don't currently
-           auto-reassociate. */
-//    	count_time++;
-//    	if(count_time > 9){
-//    		if(handle_nvs("w_mode", 1, 1) == 1){
-//				esp_restart();
-//				break;
-//    		}
-//    	}
-    	esp_wifi_connect();
-        xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
-        break;
-    default:
-        break;
-    }
-    return ESP_OK;
+        case SYSTEM_EVENT_STA_START:
+            esp_wifi_connect();
+            break;
+        case SYSTEM_EVENT_STA_DISCONNECTED:
+            esp_wifi_connect();
+            xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
+            break;
+        case SYSTEM_EVENT_STA_CONNECTED:
+            break;
+        case SYSTEM_EVENT_STA_GOT_IP:
+        	ESP_LOGI(TAG, "got ip:%s\n",
+    		ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
+        	xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
+            break;
+        case SYSTEM_EVENT_AP_STACONNECTED:
+        	ESP_LOGI(TAG, "station:"MACSTR" join,AID=%d\n",
+    		MAC2STR(event->event_info.sta_connected.mac),
+    		event->event_info.sta_connected.aid);
+        	xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
+        	break;
+        case SYSTEM_EVENT_AP_STADISCONNECTED:
+        	ESP_LOGI(TAG, "station:"MACSTR"leave,AID=%d\n",
+    		MAC2STR(event->event_info.sta_disconnected.mac),
+    		event->event_info.sta_disconnected.aid);
+        	xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
+        	break;
+        default:
+            break;
+        }
+	return ESP_OK;
 }
 
 static void initialise_wifi(void){
@@ -254,29 +307,35 @@ static void initialise_wifi(void){
 }
 
 static void initialise_ap(void){
-    tcpip_adapter_init();
-    wifi_event_group = xEventGroupCreate();
-    ESP_ERROR_CHECK( esp_event_loop_init(event_handler, NULL) );
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
-    ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
+	wifi_event_group = xEventGroupCreate();
 
-    wifi_ap_config_t ap = {
-    	.ssid = "Leon ESP32",
-		.password = "11330232",
-		.authmode = WIFI_AUTH_WPA2_PSK
-    };
-//    memcpy(ap.ssid, uc_ssid, sizeof(uc_ssid));
-//    memcpy(ap.password, uc_pw, sizeof(uc_pw));
-    wifi_config_t wifi_config = {
-        .ap = ap,
-    };
-//    wifi_config.sta.ssid = "";//(const char*)EXAMPLE_WIFI_SSID;
-//    wifi_config.sta.password = "";//(const char*)EXAMPLE_WIFI_PASS;
-    ESP_LOGI(TAG, "Setting AP configuration SSID %s...", wifi_config.ap.ssid);
-    ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_AP) );
-    ESP_ERROR_CHECK( esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config) );
-    ESP_ERROR_CHECK( esp_wifi_start() );
+	    tcpip_adapter_init();
+	    ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
+
+	    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+	    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+	    wifi_config_t wifi_config = {
+	        .ap = {
+	            .ssid = "Leon ESP32",
+	            .ssid_len = 0,
+	            .max_connection=2,
+	            .password = "11330232",
+	            .authmode = WIFI_AUTH_WPA_WPA2_PSK
+	        },
+	    };
+
+
+        uint8_t addr[6];
+		esp_efuse_mac_get_default(addr);
+		char mac[32];
+		snprintf(mac, sizeof(mac), "Switch-%02x%02x%02x%02x%02x%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+	    memcpy(wifi_config.ap.ssid, mac, sizeof(mac));
+
+	    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+	    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
+	    ESP_ERROR_CHECK(esp_wifi_start());
+
+	    ESP_LOGI(TAG, "wifi_init_softap finished\n");
 }
 
 static void https_get_task(void *pvParameters){
@@ -317,7 +376,6 @@ static void https_get_task(void *pvParameters){
 
     ESP_LOGI(TAG, "Setting hostname for TLS session...");
 
-     /* Hostname set here should match CN in server certificate */
     if((ret = mbedtls_ssl_set_hostname(&ssl, WEB_SERVER)) != 0)
     {
         ESP_LOGE(TAG, "mbedtls_ssl_set_hostname returned -0x%x", -ret);
@@ -336,10 +394,6 @@ static void https_get_task(void *pvParameters){
         goto exit;
     }
 
-    /* MBEDTLS_SSL_VERIFY_OPTIONAL is bad for security, in this example it will print
-       a warning if CA verification fails but it will continue to connect.
-       You should consider using MBEDTLS_SSL_VERIFY_REQUIRED in your own code.
-    */
     mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_REQUIRED);
     mbedtls_ssl_conf_ca_chain(&conf, &cacert, NULL);
     mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
@@ -354,12 +408,14 @@ static void https_get_task(void *pvParameters){
     }
 
     while(1) {
-        /* Wait for the callback to set the CONNECTED_BIT in the
-           event group.
-        */
         xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT,
                             false, true, portMAX_DELAY);
         ESP_LOGI(TAG, "Connected to AP");
+
+        printf("Socket connected: %d\n", ws_check_client());
+        if(ws_check_client() > 0){ // request via socket, not network
+			goto exit;
+        }
 
         mbedtls_net_init(&server_fd);
 
@@ -476,15 +532,12 @@ static void https_get_task(void *pvParameters){
             mbedtls_strerror(ret, buf, 100);
             ESP_LOGE(TAG, "Last error was: -0x%x - %s", -ret, buf);
         }
-
-        // delay 3 seconds
-//        for(int countdown = 2; countdown >= 0; countdown--) {
-//            ESP_LOGI(TAG, "%d...", countdown);
-//            vTaskDelay(1000 / portTICK_PERIOD_MS);
-//        }
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-        ESP_LOGI(TAG, "Starting again!");
-        vTaskDelete(TaskHandle_get);
+        ESP_LOGI(TAG, "Starting again after 10s!");
+        for(int countdown = 9; countdown >= 0; countdown--) {
+			ESP_LOGI(TAG, "%d...", countdown);
+			vTaskDelay(1000 / portTICK_PERIOD_MS);
+		}
+//        vTaskDelete(TaskHandle_get);
     }
 }
 
@@ -547,10 +600,10 @@ static void push_listener(void *pvParameters){
         goto exit;
     }
 
-    /* MBEDTLS_SSL_VERIFY_OPTIONAL is bad for security, in this example it will print
-       a warning if CA verification fails but it will continue to connect.
-       You should consider using MBEDTLS_SSL_VERIFY_REQUIRED in your own code.
-    */
+//     MBEDTLS_SSL_VERIFY_OPTIONAL is bad for security, in this example it will print
+//       a warning if CA verification fails but it will continue to connect.
+//       You should consider using MBEDTLS_SSL_VERIFY_REQUIRED in your own code.
+
     mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
     mbedtls_ssl_conf_ca_chain(&conf, &cacert, NULL);
     mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
@@ -832,7 +885,7 @@ static void push_device(){
 
     ESP_LOGI(TAG, "Setting hostname for TLS session...");
 
-     /* Hostname set here should match CN in server certificate */
+//     Hostname set here should match CN in server certificate
     if((ret = mbedtls_ssl_set_hostname(&ssl, WEB_SERVER)) != 0)
     {
         ESP_LOGE(TAG, "mbedtls_ssl_set_hostname returned -0x%x", -ret);
@@ -850,10 +903,6 @@ static void push_device(){
         goto exit;
     }
 
-    /* MBEDTLS_SSL_VERIFY_OPTIONAL is bad for security, in this example it will print
-       a warning if CA verification fails but it will continue to connect.
-       You should consider using MBEDTLS_SSL_VERIFY_REQUIRED in your own code.
-    */
     mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
     mbedtls_ssl_conf_ca_chain(&conf, &cacert, NULL);
     mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
@@ -869,9 +918,6 @@ static void push_device(){
     }
 
     while(1) {
-        /* Wait for the callback to set the CONNECTED_BIT in the
-           event group.
-        */
         xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT,
                             false, true, portMAX_DELAY);
         ESP_LOGI(TAG, "Connected to AP");
@@ -907,7 +953,6 @@ static void push_device(){
 
         if ((flags = mbedtls_ssl_get_verify_result(&ssl)) != 0)
         {
-            /* In real life, we probably want to close connection if ret != 0 */
             ESP_LOGW(TAG, "Failed to verify peer certificate!");
             bzero(buf, sizeof(buf));
             mbedtls_x509_crt_verify_info(buf, sizeof(buf), "  ! ", flags);
@@ -1043,8 +1088,6 @@ static void push_device(){
 }
 
 void info_listener(char *buf){
-//	ESP_LOGI(TAG, "\ninfo_listener----------->\n");
-//	mbedtls_printf("%s", buf);
 	const char needle[10] = "\r\n\r\n";
 	char *response;
 	response = strstr(buf, needle);
@@ -1055,12 +1098,6 @@ void info_listener(char *buf){
 	if(root == NULL){
 		ESP_LOGE(TAG, "\nNot JSON format----------->\n");
 	} else{
-//		tcpip_adapter_ip_info_t ip;
-//		memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
-//		if (tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0) {
-//			char *ip_address = inet_ntoa(ip.ip);
-//			cJSON_AddStringToObject(root, "wi", ip_address);
-//		}
 		ESP_LOGI(TAG, "type is: %d", root->type);
 		if(root->type == 2){ // not found in FireBase
 //			push_device();
@@ -1143,6 +1180,17 @@ void task_process_WebSocket( void *pvParameters ){
 				    default:
 				        break;
 					}
+				} else{
+	        		cJSON *ssid = cJSON_GetObjectItem(socketQ, "ssid");
+	        		cJSON *pw = cJSON_GetObjectItem(socketQ, "pw");
+	        		if(ssid != NULL && pw != NULL){
+	        			handle_snvs("ssid", ssid->valuestring, 1);
+	        			handle_snvs("pw", pw->valuestring, 1);
+	        			if(handle_nvs("w_mode", 0, 1) == ESP_OK){
+	        				esp_restart();
+	        				vTaskDelete(NULL);
+	        			}
+					}
 				}
         	}
         	//loop back frame
@@ -1159,9 +1207,9 @@ void task_process_WebSocket( void *pvParameters ){
 void app_main(){
 	//	gpio_set_direction(GPIO_NUM_16, GPIO_MODE_OUTPUT);
 	//	gpio_set_direction(GPIO_NUM_17, GPIO_MODE_OUTPUT);
-	gpio_set_direction(GPIO_NUM_18, GPIO_MODE_OUTPUT);
+//	gpio_set_direction(GPIO_NUM_18, GPIO_MODE_OUTPUT);
 	//	gpio_set_direction(GPIO_NUM_19, GPIO_MODE_OUTPUT);
-
+//
 	esp_err_t err = nvs_flash_init();
 	if (err == ESP_ERR_NVS_NO_FREE_PAGES) {
 		// NVS partition was truncated and needs to be erased
@@ -1172,39 +1220,54 @@ void app_main(){
 		err = nvs_flash_init();
 	}
 
-	ESP_ERROR_CHECK( err );
+//	handle_snvs((const char *)"ssid", (char *)uc_ssid, 0);
+//	handle_snvs((const char *)"pw", (char *)uc_pw, 0);
 
-	int val16 = handle_nvs("key16", 0, 0);
-	ESP_LOGI(TAG, "\n key16 status: %d \n", val16);
-	gpio_set_level(GPIO_NUM_16, val16);
-	int val17 = handle_nvs("key17", 0, 0);
-	ESP_LOGI(TAG, "\n key17 status: %d \n", val17);
-	gpio_set_level(GPIO_NUM_17, val17);
+	ESP_ERROR_CHECK( err );
+	gpio_set_direction(GPIO_NUM_18, GPIO_MODE_OUTPUT);
+
+//	int val16 = handle_nvs("key16", 0, 0);
+//	ESP_LOGI(TAG, "\n key16 status: %d \n", val16);
+//	gpio_set_level(GPIO_NUM_16, val16);
+//	int val17 = handle_nvs("key17", 0, 0);
+//	ESP_LOGI(TAG, "\n key17 status: %d \n", val17);
+//	gpio_set_level(GPIO_NUM_17, val17);
 	int val18 = handle_nvs("key18", 0, 0);
 	ESP_LOGI(TAG, "\n key18 status: %d \n", val18);
-	gpio_set_level(GPIO_NUM_18, val18);
-	int val19 = handle_nvs("key19", 0, 0);
-	ESP_LOGI(TAG, "\n key19 status: %d \n", val19);
-	gpio_set_level(GPIO_NUM_19, val19);
+	if(val18 >= 0){
+		gpio_set_level(GPIO_NUM_18, val18);
+	}
+//	int val19 = handle_nvs("key19", 0, 0);
+//	ESP_LOGI(TAG, "\n key19 status: %d \n", val19);
+//	gpio_set_level(GPIO_NUM_19, val19);
 
-	gpio_set_direction(GPIO_NUM_13, GPIO_MODE_INPUT);
-	gpio_set_intr_type(GPIO_NUM_13, GPIO_INTR_POSEDGE);
+	gpio_set_direction(GPIO_NUM_14, GPIO_MODE_INPUT);
+	gpio_set_intr_type(GPIO_NUM_14, GPIO_INTR_POSEDGE);
 	gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
 	xTaskCreate(gpio_task_example, "gpio_task_example", 2048, NULL, 10, NULL);
 	gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
-	gpio_isr_handler_add(GPIO_NUM_13, gpio_isr_handler, (void*) GPIO_NUM_13);
+	gpio_isr_handler_add(GPIO_NUM_14, gpio_isr_handler, (void*) GPIO_NUM_14);
 
-	if(handle_nvs("w_mode", 0, 0) < 1){ // neu ket noi duoc wifi truoc do thi bat mode sta
+	handle_snvs("ssid", (char *)uc_ssid, 0);
+	handle_snvs("pw", (char *)uc_pw, 0);
+	ESP_LOGI(TAG, "\n uc_ssid: %s \n", uc_ssid);
+	ESP_LOGI(TAG, "\n uc_pw: %s \n", uc_pw);
+
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+	if(handle_nvs("w_mode", 0, 0) < 1 && strlen((const char *)uc_ssid) > 0){ // neu ket noi duoc wifi truoc do thi bat mode sta
 	    initialise_wifi();
 	    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 3, &TaskHandle_get); //NULL
 	} else{ // neu truoc do ket noi ap that bai 10 lan thi chuyen mode
 		initialise_ap();
 	}
-
-    //create WebSocker receive task
+//    create WebSocker receive task
     xTaskCreate(&task_process_WebSocket, "ws_process_rx", 2048, NULL, 5, NULL);
 
-    //Create Websocket Server Task
+//    Create Websocket Server Task
     xTaskCreate(&ws_server, "ws_server", 2048, NULL, 5, NULL);
+
+    printf("check socket connected: %d\n", ws_check_client());
+//	ESP_LOGI(TAG, "\n ws_frame_f: %d \n", connected_f);
 
 }

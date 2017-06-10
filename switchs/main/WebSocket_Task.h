@@ -35,7 +35,6 @@
 
 #define WS_MASK_L		0x4		/**< \brief Length of MASK field in WebSocket Header*/
 
-
 /** \brief Websocket frame header type*/
 typedef struct {
 	uint8_t opcode :WS_MASK_L;
@@ -53,6 +52,11 @@ typedef struct{
 	char*				payload;
 }WebSocket_frame_t;
 
+/** \brief Websocket frame type*/
+typedef struct{
+	uint8_t				conencted;
+}WebSocket_frame_f;
+
 
 /**
  * \brief Send data to the websocket client
@@ -69,5 +73,9 @@ err_t WS_write_data(char* p_data, size_t length);
  */
 void ws_server(void *pvParameters);
 
+/**
+ * \brief ws_check_client task
+ */
+int ws_check_client();
 
 #endif /* _WEBSOCKET_TASK_H_ */
