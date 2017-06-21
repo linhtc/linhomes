@@ -65,6 +65,7 @@
 */
 //char *EXAMPLE_WIFI_SSID = "Leon A.one";//CONFIG_WIFI_SSID MOBILE STAR WiFi
 //char *EXAMPLE_WIFI_PASS = "11330232";//CONFIG_WIFI_PASSWORD mobiist@r2017
+char uc_mac[18] = "";
 unsigned char uc_ssid[32] = "";
 unsigned char uc_pw[64] = "";
 
@@ -470,19 +471,13 @@ static void https_get_task(void *pvParameters){
 
         ESP_LOGI(TAG, "Writing HTTP request...");
 
-        uint8_t addr[6];
-		esp_efuse_mac_get_default(addr);
-		char mac[18];
-		snprintf(mac, sizeof(mac), "%02x-%02x-%02x-%02x-%02x-%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
-//		printf("%s\n", mac);
-
-		char url[68];
+        char url[68];
 		strcpy(url, WEB_URL);
-		strcat( url, mac);
+		strcat( url, uc_mac);
 		strcat( url, ".json"); // access_token will be required in the future
 		printf("%s\n", url);
 
-		char request[100] = "GET ";
+		char request[120] = "GET ";
 		strcat(request, url);
 		strcat(request, " HTTP/1.0\r\n");
 		strcat(request, "User-Agent: esp-idf/1.0 esp32\r\n");
@@ -972,11 +967,6 @@ static void push_device(){
         }
 
         ESP_LOGI(TAG, "Writing HTTP request...");
-        uint8_t addr[6];
-		esp_efuse_mac_get_default(addr);
-		char mac[18];
-		snprintf(mac, sizeof(mac), "%02x-%02x-%02x-%02x-%02x-%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
-//		printf("%s\n", mac);
         char *ip_address = "";
         tcpip_adapter_ip_info_t ip;
 		memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
@@ -1003,7 +993,7 @@ static void push_device(){
 
 		char url[68];
 		strcpy(url, WEB_URL);
-		strcat( url, mac);
+		strcat( url, uc_mac);
 		strcat( url, ".json"); // access_token will be required in the future
 		printf("%s\n", url);
 
@@ -1094,7 +1084,7 @@ static void repair_ip(void *pvParameters){
 			xTaskCreate(&push_device, "push_device", 8192, NULL, 3, &TaskHandle_push_d);
 		}
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
-    	ESP_LOGI(TAG, "monitor ip address will restart...");
+    	ESP_LOGI(TAG, "ip %s will restart...", ip_address);
 	}
     goto exit;
     exit:
@@ -1312,6 +1302,11 @@ void app_main(){
 	ESP_LOGI(TAG, "\n uc_pw: %s \n", uc_pw);
 
     vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+
+    uint8_t addr[6];
+	esp_efuse_mac_get_default(addr);
+	snprintf(uc_mac, sizeof(uc_mac), "%02x%02x%02x%02x%02x%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 
 	if(handle_nvs("w_mode", 0, 0) < 1 && strlen((const char *)uc_ssid) > 0){ // neu ket noi duoc wifi truoc do thi bat mode sta
 	    initialise_wifi();
