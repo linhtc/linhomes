@@ -26,8 +26,8 @@
 			
 			WebSocket_connection.onopen = function(){
 			  $('#WebSocket_State').html('<input type="text" id="websocket_message" value="..."/><a href=\"javascript:WebSocketSend()\">send WebSocket</a>');
-		      $("#websocket_message").val(JSON.stringify({ps:18,req:1}));
-			  //$("#websocket_message").val(JSON.stringify({ssid:"Leon A.one",pw:"11330232"}));
+		     // $("#websocket_message").val(JSON.stringify({ps:18,req:1}));
+			  $("#websocket_message").val(JSON.stringify({ssid:"MOBILE STAR WiFi",pw:"mobiist@r2017"}));
 			  
 			  $('#WebSocket_State').append('|<a href=\"javascript:WebSocketSend(1)\">ON</a>|');
 			  $('#WebSocket_State').append('<a href=\"javascript:WebSocketSend(0)\">OFF</a>');
@@ -64,8 +64,8 @@
 
 	<div id="WebSocket_State">
 		WebSocket Server: 
-		<input type="text" id="websocket_address" value="ws://192.168.1.128:9998"/>
-		<!--<input type="text" id="websocket_address" value="ws://192.168.4.1:9998"/>-->
+		<!--<input type="text" id="websocket_address" value="ws://192.168.1.128:9998"/>-->
+		<input type="text" id="websocket_address" value="ws://192.168.4.1:9998"/>
 		<a href="javascript:connect()">Connect</a>
 		</div>
 	<br>

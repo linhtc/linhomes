@@ -106,10 +106,12 @@ static const char *TAG = "example";
 //"\r\n"
 //"{\"pwr\":\"off\"}";
 char *REQUEST = "";
+char *quotaIP = "";
 void info_listener(char argv[]);
 
 xTaskHandle TaskHandle_get;
 xTaskHandle TaskHandle_push_i;
+xTaskHandle TaskHandle_repair;
 xTaskHandle TaskHandle_push_d;
 xTaskHandle TaskHandle_ctrl_16;
 xTaskHandle TaskHandle_ctrl_17;
@@ -412,6 +414,13 @@ static void https_get_task(void *pvParameters){
                             false, true, portMAX_DELAY);
         ESP_LOGI(TAG, "Connected to AP");
 
+        char *ip_address = "";
+		tcpip_adapter_ip_info_t ip;
+		memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
+		if (tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0) {
+			ip_address = inet_ntoa(ip.ip);
+			quotaIP = ip_address;
+		}
         printf("Socket connected: %d\n", ws_check_client());
         if(ws_check_client() > 0){ // request via socket, not network
 			goto exit;
@@ -963,52 +972,34 @@ static void push_device(){
         }
 
         ESP_LOGI(TAG, "Writing HTTP request...");
-
+        uint8_t addr[6];
+		esp_efuse_mac_get_default(addr);
+		char mac[18];
+		snprintf(mac, sizeof(mac), "%02x-%02x-%02x-%02x-%02x-%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+//		printf("%s\n", mac);
         char *ip_address = "";
         tcpip_adapter_ip_info_t ip;
 		memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
 		if (tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0) {
 			ip_address = inet_ntoa(ip.ip);
+			quotaIP = ip_address;
 		}
 
         cJSON *root = cJSON_CreateObject();
-        cJSON_AddStringToObject(root, "ws", (const char *)uc_pw);
+        cJSON_AddStringToObject(root, "ws", (const char *)uc_ssid);
         cJSON_AddStringToObject(root, "wp", (const char *)uc_pw);
 		cJSON_AddStringToObject(root, "wi", ip_address);
-
-        cJSON *gpio16 = cJSON_CreateObject();
-        cJSON_AddNumberToObject(gpio16, "req", 0);
-        cJSON_AddNumberToObject(gpio16, "res", 0);
-        cJSON_AddNumberToObject(gpio16, "sta", 1);
-
-        cJSON *gpio17 = cJSON_CreateObject();
-        cJSON_AddNumberToObject(gpio17, "req", 0);
-        cJSON_AddNumberToObject(gpio17, "res", 0);
-        cJSON_AddNumberToObject(gpio17, "sta", 1);
+//		cJSON_AddStringToObject(root, "mac", mac);
 
         cJSON *gpio18 = cJSON_CreateObject();
         cJSON_AddNumberToObject(gpio18, "req", 0);
         cJSON_AddNumberToObject(gpio18, "res", 0);
         cJSON_AddNumberToObject(gpio18, "sta", 1);
 
-        cJSON *gpio19 = cJSON_CreateObject();
-        cJSON_AddNumberToObject(gpio19, "req", 0);
-        cJSON_AddNumberToObject(gpio19, "res", 0);
-        cJSON_AddNumberToObject(gpio19, "sta", 1);
-
         cJSON *pins = cJSON_CreateObject();
-        cJSON_AddItemToObject(pins, "16", gpio16);
-        cJSON_AddItemToObject(pins, "17", gpio17);
         cJSON_AddItemToObject(pins, "18", gpio18);
-        cJSON_AddItemToObject(pins, "19", gpio19);
 
         cJSON_AddItemToObject(root, "ps", pins);
-
-        uint8_t addr[6];
-		esp_efuse_mac_get_default(addr);
-		char mac[18];
-		snprintf(mac, sizeof(mac), "%02x-%02x-%02x-%02x-%02x-%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
-//		printf("%s\n", mac);
 
 		char url[68];
 		strcpy(url, WEB_URL);
@@ -1082,9 +1073,32 @@ static void push_device(){
             ESP_LOGE(TAG, "Last error was: -0x%x - %s", -ret, buf);
         }
 //        return;
-        esp_restart();
+//        esp_restart();
+	    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 3, &TaskHandle_get); //NULL
         vTaskDelete(TaskHandle_push_d);
     }
+}
+
+static void repair_ip(void *pvParameters){
+	while(1){
+		char *ip_address = "";
+		tcpip_adapter_ip_info_t ip;
+		memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
+		if (tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0) {
+			ip_address = inet_ntoa(ip.ip);
+		}
+		if(strcmp(ip_address, quotaIP) != 0 && strcmp(ip_address, "0.0.0.0") != 0){
+			ESP_LOGW(TAG, "should to update ip address");
+			ESP_LOGW(TAG, "ip old %s - new %s", quotaIP, ip_address);
+			quotaIP = ip_address;
+			xTaskCreate(&push_device, "push_device", 8192, NULL, 3, &TaskHandle_push_d);
+		}
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+    	ESP_LOGI(TAG, "monitor ip address will restart...");
+	}
+    goto exit;
+    exit:
+    	ESP_LOGI(TAG, "monitor ip address has exited...");
 }
 
 void info_listener(char *buf){
@@ -1161,40 +1175,84 @@ void task_process_WebSocket( void *pvParameters ){
 
         	cJSON *socketQ = cJSON_Parse(__RX_frame.payload);
         	if(socketQ != NULL){
-        		cJSON *gpio_num = cJSON_GetObjectItem(socketQ, "ps");
-        		cJSON *gpio_req = cJSON_GetObjectItem(socketQ, "req");
-				if(gpio_num != NULL && gpio_req != NULL){
-					switch (gpio_num->valueint){
-					case 16:
-						xTaskCreate(&control_16, "control_16", 8192, (void*)gpio_req->valueint, 1, &TaskHandle_ctrl_16);
-						break;
-					case 17:
-						xTaskCreate(&control_17, "control_17", 8192, (void*)gpio_req->valueint, 1, &TaskHandle_ctrl_17);
-						break;
-					case 18:
-						xTaskCreate(&control_18, "control_18", 8192, (void*)gpio_req->valueint, 1, &TaskHandle_ctrl_18);
-						break;
-					case 19:
-						xTaskCreate(&control_19, "control_19", 8192, (void*)gpio_req->valueint, 1, &TaskHandle_ctrl_19);
-						break;
-				    default:
-				        break;
+        		cJSON *response = cJSON_CreateObject();
+        		cJSON *cmd = cJSON_GetObjectItem(socketQ, "cmd");
+        		if(cmd != NULL){
+					ESP_LOGI(TAG, "\n cmd --> %d \n", cmd->valueint);
+        			switch (cmd->valueint){ // 1 => ack -> info, 2 set ssid, 3 control pin
+						case 1:{ // get info
+							ESP_LOGI(TAG, "\n cmd 1 --> %d \n", cmd->valueint);
+							int val18 = handle_nvs("key18", 0, 0);
+		        			cJSON_AddNumberToObject(response, "p18", val18);
+		        			uint8_t addr[6];
+							esp_efuse_mac_get_default(addr);
+							char mac[18];
+							snprintf(mac, sizeof(mac), "%02x-%02x-%02x-%02x-%02x-%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+							char *ip_address = "";
+							tcpip_adapter_ip_info_t ip;
+							memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
+							if (tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0) {
+								ip_address = inet_ntoa(ip.ip);
+							}
+							cJSON_AddStringToObject(response, "ws", (const char *)uc_ssid);
+							cJSON_AddStringToObject(response, "wp", (const char *)uc_pw);
+							cJSON_AddStringToObject(response, "wi", ip_address);
+							cJSON_AddNumberToObject(response, "status", 1);
+							break;
+						}
+						case 2:{ // set ssid
+							ESP_LOGI(TAG, "\n cmd 2 --> %d \n", cmd->valueint);
+							cJSON *ssid = cJSON_GetObjectItem(socketQ, "ssid");
+							cJSON *pw = cJSON_GetObjectItem(socketQ, "pw");
+							if(ssid != NULL && pw != NULL){
+								handle_snvs("ssid", ssid->valuestring, 1);
+								handle_snvs("pw", pw->valuestring, 1);
+								cJSON_AddNumberToObject(response, "status", 1);
+								if(handle_nvs("w_mode", 0, 1) == ESP_OK){
+									char *res = cJSON_Print(response);
+									WS_write_data(res, strlen(res));
+									ESP_LOGI(TAG, "\n system will restart after %d seconds \n", 3);
+								    vTaskDelay(3000 / portTICK_PERIOD_MS);
+									esp_restart();
+									vTaskDelete(NULL);
+								} else{
+									ESP_LOGI(TAG, "\n write w_mode error \n");
+								}
+							}
+							break;
+						}
+						case 3:{ // control pin
+							ESP_LOGI(TAG, "\n cmd 3 --> %d \n", cmd->valueint);
+							cJSON *gpio_num = cJSON_GetObjectItem(socketQ, "ps");
+							cJSON *gpio_req = cJSON_GetObjectItem(socketQ, "req");
+							if(gpio_num != NULL && gpio_req != NULL){
+								switch (gpio_num->valueint){
+								case 18:
+									xTaskCreate(&control_18, "control_18", 8192, (void*)gpio_req->valueint, 1, &TaskHandle_ctrl_18);
+									cJSON_AddNumberToObject(response, "status", 1);
+				        			break;
+								default:
+									break;
+								}
+							}
+							break;
+						}
+						default:{
+							cJSON_AddNumberToObject(response, "status", 0);
+							break;
+						}
 					}
-				} else{
-	        		cJSON *ssid = cJSON_GetObjectItem(socketQ, "ssid");
-	        		cJSON *pw = cJSON_GetObjectItem(socketQ, "pw");
-	        		if(ssid != NULL && pw != NULL){
-	        			handle_snvs("ssid", ssid->valuestring, 1);
-	        			handle_snvs("pw", pw->valuestring, 1);
-	        			if(handle_nvs("w_mode", 0, 1) == ESP_OK){
-	        				esp_restart();
-	        				vTaskDelete(NULL);
-	        			}
-					}
-				}
+        		}
+				char *res = cJSON_Print(response);
+				ESP_LOGI(TAG, "\n %s \n", res);
+				ESP_LOGI(TAG, "\n len frame: %d \n", strlen(res));
+				esp_err_t err = WS_write_data(res, strlen(res));
+				ESP_LOGI(TAG, "\n res %d \n", err);
+//				free(response);
+        	} else{
+            	//loop back frame
+            	WS_write_data(__RX_frame.payload, __RX_frame.payload_length);
         	}
-        	//loop back frame
-        	WS_write_data(__RX_frame.payload, __RX_frame.payload_length);
 
         	//free memory
 			if (__RX_frame.payload != NULL)
@@ -1258,6 +1316,7 @@ void app_main(){
 	if(handle_nvs("w_mode", 0, 0) < 1 && strlen((const char *)uc_ssid) > 0){ // neu ket noi duoc wifi truoc do thi bat mode sta
 	    initialise_wifi();
 	    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 3, &TaskHandle_get); //NULL
+	    xTaskCreate(&repair_ip, "repair_ip", 8192, NULL, 6, &TaskHandle_repair); //NULL
 	} else{ // neu truoc do ket noi ap that bai 10 lan thi chuyen mode
 		initialise_ap();
 	}
