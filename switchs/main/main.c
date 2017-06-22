@@ -251,6 +251,7 @@ static void gpio_task_example(void* arg){
 }
 
 static esp_err_t event_handler(void *ctx, system_event_t *event){
+	ESP_LOGI(TAG, "\n error id: %d \n", event->event_id);
     switch(event->event_id) {
         case SYSTEM_EVENT_STA_START:
             esp_wifi_connect();
@@ -280,7 +281,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event){
         	break;
         default:
             break;
-        }
+	}
 	return ESP_OK;
 }
 
@@ -1302,7 +1303,6 @@ void app_main(){
 	ESP_LOGI(TAG, "\n uc_pw: %s \n", uc_pw);
 
     vTaskDelay(1000 / portTICK_PERIOD_MS);
-
 
     uint8_t addr[6];
 	esp_efuse_mac_get_default(addr);
