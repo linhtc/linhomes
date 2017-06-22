@@ -91,6 +91,7 @@ const int CONNECTED_BIT = BIT0;
 #define GPIO_INPUT_PIN_SEL  ((1<<GPIO_NUM_14))
 
 static const char *TAG = "example";
+int second_time = 0;
 //static int count_time = 0;
 
 //static const char *REQUEST = "GET " WEB_URL " HTTP/1.0\r\n"
@@ -143,31 +144,16 @@ static int handle_nvs(const char *key, int val, int flag){
 	if (err != ESP_OK) {
 		printf("Error (%d) opening NVS handle!\n", err);
 	} else {
-		printf("Done\n");
-
-		// Write
-		if(flag == 1){
-			// Write
+		if(flag == 1){ // Write
 			err = nvs_set_i32(my_handle, key, val);
-			printf((err != ESP_OK) ? "Failed!\n" : "Done\n");
-
-			// Commit written value.
-			// After setting any values, nvs_commit() must be called to ensure changes are written
-			// to flash storage. Implementations may write to storage at other times,
-			// but this is not guaranteed.
-			printf("Committing updates in NVS ... ");
+			ESP_LOGI(TAG, "\n write %s = %d => %s \n", key, val, ((err != ESP_OK) ? "Failed!\n" : "Done\n"));
 			err = nvs_commit(my_handle);
-			printf((err != ESP_OK) ? "Failed!\n" : "Done\n");
 			status = err;
 		} else{ // Read
-			printf("Reading restart counter from NVS ... ");
-//			int32_t nvs_val = 0; // value will default to 0, if not set yet in NVS
 			err = nvs_get_i32(my_handle, key, &status);
-			ESP_LOGI(TAG, "\ncJSON_Print-----------> %d\n", err);
 			switch (err) {
 				case ESP_OK:
-					printf("NVS read\n");
-					printf("Key %s = %d\n", key, status);
+					ESP_LOGI(TAG, "Read key %s = %d\n", key, status);
 					break;
 				case ESP_ERR_NVS_NOT_FOUND:
 					printf("The value is not initialized yet!\n");
@@ -176,7 +162,6 @@ static int handle_nvs(const char *key, int val, int flag){
 					printf("Error (%d) reading!\n", err);
 			}
 		}
-
 		// Close
 		nvs_close(my_handle);
 	}
@@ -250,96 +235,223 @@ static void gpio_task_example(void* arg){
     }
 }
 
-static esp_err_t event_handler(void *ctx, system_event_t *event){
-	ESP_LOGI(TAG, "\n error id: %d \n", event->event_id);
-    switch(event->event_id) {
-        case SYSTEM_EVENT_STA_START:
-            esp_wifi_connect();
-            break;
-        case SYSTEM_EVENT_STA_DISCONNECTED:
-            esp_wifi_connect();
-            xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
-            break;
-        case SYSTEM_EVENT_STA_CONNECTED:
-            break;
-        case SYSTEM_EVENT_STA_GOT_IP:
-        	ESP_LOGI(TAG, "got ip:%s\n",
-    		ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
-        	xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
-            break;
-        case SYSTEM_EVENT_AP_STACONNECTED:
-        	ESP_LOGI(TAG, "station:"MACSTR" join,AID=%d\n",
-    		MAC2STR(event->event_info.sta_connected.mac),
-    		event->event_info.sta_connected.aid);
-        	xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
-        	break;
-        case SYSTEM_EVENT_AP_STADISCONNECTED:
-        	ESP_LOGI(TAG, "station:"MACSTR"leave,AID=%d\n",
-    		MAC2STR(event->event_info.sta_disconnected.mac),
-    		event->event_info.sta_disconnected.aid);
-        	xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
-        	break;
-        default:
-            break;
-	}
-	return ESP_OK;
-}
+static void push_device(){
+    char buf[512];
+    int ret, flags, len;
 
-static void initialise_wifi(void){
-    tcpip_adapter_init();
-    wifi_event_group = xEventGroupCreate();
-    ESP_ERROR_CHECK( esp_event_loop_init(event_handler, NULL) );
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
-    ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
+    mbedtls_entropy_context entropy;
+    mbedtls_ctr_drbg_context ctr_drbg;
+    mbedtls_ssl_context ssl;
+    mbedtls_x509_crt cacert;
+    mbedtls_ssl_config conf;
+    mbedtls_net_context server_fd;
 
-    wifi_sta_config_t sta = {
-    	.ssid = "Leon ESP32",
-		.password = "11330232"
-    };
-    memcpy(sta.ssid, uc_ssid, sizeof(uc_ssid));
-    memcpy(sta.password, uc_pw, sizeof(uc_pw));
-    wifi_config_t wifi_config = {
-        .sta = sta,
-    };
-//    wifi_config.sta.ssid = "";//(const char*)EXAMPLE_WIFI_SSID;
-//    wifi_config.sta.password = "";//(const char*)EXAMPLE_WIFI_PASS;
-    ESP_LOGI(TAG, "Setting WiFi configuration SSID %s...", wifi_config.sta.ssid);
-    ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_STA) );
-    ESP_ERROR_CHECK( esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config) );
-    ESP_ERROR_CHECK( esp_wifi_start() );
-}
+    mbedtls_ssl_init(&ssl);
+    mbedtls_x509_crt_init(&cacert);
+    mbedtls_ctr_drbg_init(&ctr_drbg);
+    ESP_LOGI(TAG, "Seeding the random number generator");
 
-static void initialise_ap(void){
-	wifi_event_group = xEventGroupCreate();
+    mbedtls_ssl_config_init(&conf);
 
-	    tcpip_adapter_init();
-	    ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
+    mbedtls_entropy_init(&entropy);
+    if((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
+                                    NULL, 0)) != 0)
+    {
+        ESP_LOGE(TAG, "mbedtls_ctr_drbg_seed returned %d", ret);
+        abort();
+    }
 
-	    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-	    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-	    wifi_config_t wifi_config = {
-	        .ap = {
-	            .ssid = "Leon ESP32",
-	            .ssid_len = 0,
-	            .max_connection=2,
-	            .password = "11330232",
-	            .authmode = WIFI_AUTH_WPA_WPA2_PSK
-	        },
-	    };
+    ESP_LOGI(TAG, "Loading the CA root certificate...");
 
+    ret = mbedtls_x509_crt_parse(&cacert, server_root_cert_pem_start,
+                                 server_root_cert_pem_end-server_root_cert_pem_start);
 
-        uint8_t addr[6];
-		esp_efuse_mac_get_default(addr);
-		char mac[32];
-		snprintf(mac, sizeof(mac), "Switch-%02x%02x%02x%02x%02x%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
-	    memcpy(wifi_config.ap.ssid, mac, sizeof(mac));
+    if(ret < 0)
+    {
+        ESP_LOGE(TAG, "mbedtls_x509_crt_parse returned -0x%x\n\n", -ret);
+        abort();
+    }
 
-	    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
-	    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
-	    ESP_ERROR_CHECK(esp_wifi_start());
+    ESP_LOGI(TAG, "Setting hostname for TLS session...");
 
-	    ESP_LOGI(TAG, "wifi_init_softap finished\n");
+//     Hostname set here should match CN in server certificate
+    if((ret = mbedtls_ssl_set_hostname(&ssl, WEB_SERVER)) != 0)
+    {
+        ESP_LOGE(TAG, "mbedtls_ssl_set_hostname returned -0x%x", -ret);
+        abort();
+    }
+
+    ESP_LOGI(TAG, "Setting up the SSL/TLS structure...");
+
+    if((ret = mbedtls_ssl_config_defaults(&conf,
+                                          MBEDTLS_SSL_IS_CLIENT,
+                                          MBEDTLS_SSL_TRANSPORT_STREAM,
+                                          MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
+    {
+        ESP_LOGE(TAG, "mbedtls_ssl_config_defaults returned %d", ret);
+        goto exit;
+    }
+
+    mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
+    mbedtls_ssl_conf_ca_chain(&conf, &cacert, NULL);
+    mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
+	mbedtls_ssl_conf_read_timeout(&conf, 9000);
+#ifdef CONFIG_MBEDTLS_DEBUG
+    mbedtls_esp_enable_debug_log(&conf, 4);
+#endif
+
+    if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
+    {
+        ESP_LOGE(TAG, "mbedtls_ssl_setup returned -0x%x\n\n", -ret);
+        goto exit;
+    }
+
+    while(1) {
+        xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT,
+                            false, true, portMAX_DELAY);
+        ESP_LOGI(TAG, "Connected to AP");
+
+        mbedtls_net_init(&server_fd);
+
+        ESP_LOGI(TAG, "Connecting to %s:%s...", WEB_SERVER, WEB_PORT);
+
+        if ((ret = mbedtls_net_connect(&server_fd, WEB_SERVER,
+                                      WEB_PORT, MBEDTLS_NET_PROTO_TCP)) != 0)
+        {
+            ESP_LOGE(TAG, "mbedtls_net_connect returned -%x", -ret);
+            goto exit;
+        }
+
+        ESP_LOGI(TAG, "Connected.");
+
+        //        mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
+		mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
+
+        ESP_LOGI(TAG, "Performing the SSL/TLS handshake...");
+
+        while ((ret = mbedtls_ssl_handshake(&ssl)) != 0)
+        {
+            if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
+            {
+                ESP_LOGE(TAG, "mbedtls_ssl_handshake returned -0x%x", -ret);
+                goto exit;
+            }
+        }
+
+        ESP_LOGI(TAG, "Verifying peer X.509 certificate...");
+
+        if ((flags = mbedtls_ssl_get_verify_result(&ssl)) != 0)
+        {
+            ESP_LOGW(TAG, "Failed to verify peer certificate!");
+            bzero(buf, sizeof(buf));
+            mbedtls_x509_crt_verify_info(buf, sizeof(buf), "  ! ", flags);
+            ESP_LOGW(TAG, "verification info: %s", buf);
+        }
+        else {
+            ESP_LOGI(TAG, "Certificate verified.");
+        }
+
+        ESP_LOGI(TAG, "Writing HTTP request...");
+        char *ip_address = "";
+        tcpip_adapter_ip_info_t ip;
+		memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
+		if (tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0) {
+			ip_address = inet_ntoa(ip.ip);
+			quotaIP = ip_address;
+		}
+
+        cJSON *root = cJSON_CreateObject();
+        cJSON_AddStringToObject(root, "ws", (const char *)uc_ssid);
+        cJSON_AddStringToObject(root, "wp", (const char *)uc_pw);
+		cJSON_AddStringToObject(root, "wi", ip_address);
+//		cJSON_AddStringToObject(root, "mac", mac);
+
+        cJSON *gpio18 = cJSON_CreateObject();
+        cJSON_AddNumberToObject(gpio18, "req", 0);
+        cJSON_AddNumberToObject(gpio18, "res", 0);
+        cJSON_AddNumberToObject(gpio18, "sta", 1);
+
+        cJSON *pins = cJSON_CreateObject();
+        cJSON_AddItemToObject(pins, "18", gpio18);
+
+        cJSON_AddItemToObject(root, "ps", pins);
+
+		char url[68];
+		strcpy(url, WEB_URL);
+		strcat( url, uc_mac);
+		strcat( url, ".json"); // access_token will be required in the future
+		printf("%s\n", url);
+
+		char *post = cJSON_Print(root);
+		char len_post[10];
+		snprintf(len_post, sizeof(len_post), "%d", strlen(post));
+
+		char request[512] = "PUT ";
+		strcat(request, url);
+		strcat(request, " HTTP/1.0\r\n");
+		strcat(request, "User-Agent: esp-idf/1.0 esp32\r\n");
+		strcat(request, "Connection: close\r\n");
+		strcat(request, "Host: linhomes-afa8a.firebaseio.com\r\n");
+		strcat(request, "Content-Type: application/json\r\n");
+		strcat(request, "Content-Length: ");
+		strcat(request, len_post);
+		strcat(request, "\r\n");
+		strcat(request, "\r\n");
+		strcat(request, post);
+		REQUEST = request;
+		printf("%s\n", REQUEST);
+		while((ret = mbedtls_ssl_write(&ssl, (const unsigned char *)REQUEST, strlen(REQUEST))) <= 0){
+			if(ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
+				ESP_LOGE(TAG, "mbedtls_ssl_write returned -0x%x", -ret);
+//				return;
+				goto exit;
+			}
+		}
+
+		len = ret;
+		ESP_LOGI(TAG, "%d bytes written", len);
+		ESP_LOGI(TAG, "Reading HTTP response...");
+		do{
+			len = sizeof(buf) - 1;
+			bzero(buf, sizeof(buf));
+			ret = mbedtls_ssl_read(&ssl, (unsigned char *)buf, len);
+
+			if(ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE){
+				continue;
+			}
+			if(ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) {
+				ret = 0;
+				break;
+			}
+			if(ret < 0){
+				ESP_LOGE(TAG, "mbedtls_ssl_read returned -0x%x", -ret);
+				break;
+			}
+			if(ret == 0){
+				ESP_LOGI(TAG, "connection closed");
+				break;
+			}
+			mbedtls_printf("%s", buf);
+		} while(1);
+
+        mbedtls_ssl_close_notify(&ssl);
+
+        cJSON_Delete(root);
+
+    exit:
+        mbedtls_ssl_session_reset(&ssl);
+        mbedtls_net_free(&server_fd);
+
+        if(ret != 0){
+            mbedtls_strerror(ret, buf, 100);
+            ESP_LOGE(TAG, "Last error was: -0x%x - %s", -ret, buf);
+        } else if(second_time < 1){
+        	if(handle_nvs("st", 1, 1) == ESP_OK){
+        		second_time = 1;
+        	}
+        }
+        vTaskDelete(TaskHandle_push_d);
+    }
 }
 
 static void https_get_task(void *pvParameters){
@@ -388,7 +500,7 @@ static void https_get_task(void *pvParameters){
 
     ESP_LOGI(TAG, "Setting up the SSL/TLS structure...");
 
-	mbedtls_ssl_conf_read_timeout(&conf, 15000);
+	mbedtls_ssl_conf_read_timeout(&conf, 9000);
     if((ret = mbedtls_ssl_config_defaults(&conf,
                                           MBEDTLS_SSL_IS_CLIENT,
                                           MBEDTLS_SSL_TRANSPORT_STREAM,
@@ -405,8 +517,7 @@ static void https_get_task(void *pvParameters){
     mbedtls_esp_enable_debug_log(&conf, 4);
 #endif
 
-    if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
-    {
+    if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0) {
         ESP_LOGE(TAG, "mbedtls_ssl_setup returned -0x%x\n\n", -ret);
         goto exit;
     }
@@ -432,9 +543,7 @@ static void https_get_task(void *pvParameters){
 
         ESP_LOGI(TAG, "Connecting to %s:%s...", WEB_SERVER, WEB_PORT);
 
-        if ((ret = mbedtls_net_connect(&server_fd, WEB_SERVER,
-                                      WEB_PORT, MBEDTLS_NET_PROTO_TCP)) != 0)
-        {
+        if ((ret = mbedtls_net_connect(&server_fd, WEB_SERVER, WEB_PORT, MBEDTLS_NET_PROTO_TCP)) != 0){
             ESP_LOGE(TAG, "mbedtls_net_connect returned -%x", -ret);
             goto exit;
         }
@@ -446,11 +555,9 @@ static void https_get_task(void *pvParameters){
 
         ESP_LOGI(TAG, "Performing the SSL/TLS handshake...");
 
-        while ((ret = mbedtls_ssl_handshake(&ssl)) != 0)
-        {
+        while ((ret = mbedtls_ssl_handshake(&ssl)) != 0){
             ESP_LOGE(TAG, "mbedtls_ssl_handshake returned -0x%x", -ret);
-            if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
-            {
+            if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
                 ESP_LOGE(TAG, "mbedtls_ssl_handshake returned -0x%x", -ret);
                 goto exit;
             }
@@ -544,6 +651,103 @@ static void https_get_task(void *pvParameters){
 		}
 //        vTaskDelete(TaskHandle_get);
     }
+}
+
+static esp_err_t event_handler(void *ctx, system_event_t *event){
+	ESP_LOGI(TAG, "\n error id: %d \n", event->event_id);
+    switch(event->event_id) {
+        case SYSTEM_EVENT_STA_START:
+            esp_wifi_connect();
+            break;
+        case SYSTEM_EVENT_STA_DISCONNECTED:
+            esp_wifi_connect();
+            xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
+            break;
+        case SYSTEM_EVENT_STA_CONNECTED:
+        	if(second_time < 1){
+        		xTaskCreate(&push_device, "push_device", 8192, NULL, 3, &TaskHandle_push_d);
+//        		vTaskDelay(1000 / portTICK_PERIOD_MS);
+//        	    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 4, &TaskHandle_get);
+        	}
+            break;
+        case SYSTEM_EVENT_STA_GOT_IP:
+        	ESP_LOGI(TAG, "got ip:%s\n",
+    		ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
+        	xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
+            break;
+        case SYSTEM_EVENT_AP_STACONNECTED:
+        	ESP_LOGI(TAG, "station:"MACSTR" join,AID=%d\n",
+    		MAC2STR(event->event_info.sta_connected.mac),
+    		event->event_info.sta_connected.aid);
+        	xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
+        	break;
+        case SYSTEM_EVENT_AP_STADISCONNECTED:
+        	ESP_LOGI(TAG, "station:"MACSTR"leave,AID=%d\n",
+    		MAC2STR(event->event_info.sta_disconnected.mac),
+    		event->event_info.sta_disconnected.aid);
+        	xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
+        	break;
+        default:
+            break;
+	}
+	return ESP_OK;
+}
+
+static void initialise_wifi(void){
+    tcpip_adapter_init();
+    wifi_event_group = xEventGroupCreate();
+    ESP_ERROR_CHECK( esp_event_loop_init(event_handler, NULL) );
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
+    ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
+
+    wifi_sta_config_t sta = {
+    	.ssid = "Leon ESP32",
+		.password = "11330232"
+    };
+    memcpy(sta.ssid, uc_ssid, sizeof(uc_ssid));
+    memcpy(sta.password, uc_pw, sizeof(uc_pw));
+    wifi_config_t wifi_config = {
+        .sta = sta,
+    };
+//    wifi_config.sta.ssid = "";//(const char*)EXAMPLE_WIFI_SSID;
+//    wifi_config.sta.password = "";//(const char*)EXAMPLE_WIFI_PASS;
+    ESP_LOGI(TAG, "Setting WiFi configuration SSID %s...", wifi_config.sta.ssid);
+    ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_STA) );
+    ESP_ERROR_CHECK( esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config) );
+    ESP_ERROR_CHECK( esp_wifi_start() );
+}
+
+static void initialise_ap(void){
+	wifi_event_group = xEventGroupCreate();
+
+	    tcpip_adapter_init();
+	    ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
+
+	    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+	    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+	    wifi_config_t wifi_config = {
+	        .ap = {
+	            .ssid = "Leon ESP32",
+	            .ssid_len = 0,
+	            .max_connection=2,
+	            .password = "11330232",
+	            .authmode = WIFI_AUTH_WPA_WPA2_PSK
+	        },
+	    };
+
+
+        uint8_t addr[6];
+		esp_efuse_mac_get_default(addr);
+		char mac[32];
+		snprintf(mac, sizeof(mac), "Switch-%02x%02x%02x%02x%02x%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+	    memcpy(wifi_config.ap.ssid, mac, sizeof(mac));
+
+	    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+	    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
+	    ESP_ERROR_CHECK(esp_wifi_start());
+
+	    ESP_LOGI(TAG, "wifi_init_softap finished\n");
 }
 
 static void push_listener(void *pvParameters){
@@ -851,225 +1055,6 @@ static void control_19(void *pvParameters){
 	vTaskDelete(TaskHandle_ctrl_19);
 }
 
-static void push_device(){
-    char buf[512];
-    int ret, flags, len;
-
-    mbedtls_entropy_context entropy;
-    mbedtls_ctr_drbg_context ctr_drbg;
-    mbedtls_ssl_context ssl;
-    mbedtls_x509_crt cacert;
-    mbedtls_ssl_config conf;
-    mbedtls_net_context server_fd;
-
-    mbedtls_ssl_init(&ssl);
-    mbedtls_x509_crt_init(&cacert);
-    mbedtls_ctr_drbg_init(&ctr_drbg);
-    ESP_LOGI(TAG, "Seeding the random number generator");
-
-    mbedtls_ssl_config_init(&conf);
-
-    mbedtls_entropy_init(&entropy);
-    if((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
-                                    NULL, 0)) != 0)
-    {
-        ESP_LOGE(TAG, "mbedtls_ctr_drbg_seed returned %d", ret);
-        abort();
-    }
-
-    ESP_LOGI(TAG, "Loading the CA root certificate...");
-
-    ret = mbedtls_x509_crt_parse(&cacert, server_root_cert_pem_start,
-                                 server_root_cert_pem_end-server_root_cert_pem_start);
-
-    if(ret < 0)
-    {
-        ESP_LOGE(TAG, "mbedtls_x509_crt_parse returned -0x%x\n\n", -ret);
-        abort();
-    }
-
-    ESP_LOGI(TAG, "Setting hostname for TLS session...");
-
-//     Hostname set here should match CN in server certificate
-    if((ret = mbedtls_ssl_set_hostname(&ssl, WEB_SERVER)) != 0)
-    {
-        ESP_LOGE(TAG, "mbedtls_ssl_set_hostname returned -0x%x", -ret);
-        abort();
-    }
-
-    ESP_LOGI(TAG, "Setting up the SSL/TLS structure...");
-
-    if((ret = mbedtls_ssl_config_defaults(&conf,
-                                          MBEDTLS_SSL_IS_CLIENT,
-                                          MBEDTLS_SSL_TRANSPORT_STREAM,
-                                          MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
-    {
-        ESP_LOGE(TAG, "mbedtls_ssl_config_defaults returned %d", ret);
-        goto exit;
-    }
-
-    mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
-    mbedtls_ssl_conf_ca_chain(&conf, &cacert, NULL);
-    mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
-	mbedtls_ssl_conf_read_timeout(&conf, 3000);
-#ifdef CONFIG_MBEDTLS_DEBUG
-    mbedtls_esp_enable_debug_log(&conf, 4);
-#endif
-
-    if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
-    {
-        ESP_LOGE(TAG, "mbedtls_ssl_setup returned -0x%x\n\n", -ret);
-        goto exit;
-    }
-
-    while(1) {
-        xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT,
-                            false, true, portMAX_DELAY);
-        ESP_LOGI(TAG, "Connected to AP");
-
-        mbedtls_net_init(&server_fd);
-
-        ESP_LOGI(TAG, "Connecting to %s:%s...", WEB_SERVER, WEB_PORT);
-
-        if ((ret = mbedtls_net_connect(&server_fd, WEB_SERVER,
-                                      WEB_PORT, MBEDTLS_NET_PROTO_TCP)) != 0)
-        {
-            ESP_LOGE(TAG, "mbedtls_net_connect returned -%x", -ret);
-            goto exit;
-        }
-
-        ESP_LOGI(TAG, "Connected.");
-
-        //        mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
-		mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
-
-        ESP_LOGI(TAG, "Performing the SSL/TLS handshake...");
-
-        while ((ret = mbedtls_ssl_handshake(&ssl)) != 0)
-        {
-            if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
-            {
-                ESP_LOGE(TAG, "mbedtls_ssl_handshake returned -0x%x", -ret);
-                goto exit;
-            }
-        }
-
-        ESP_LOGI(TAG, "Verifying peer X.509 certificate...");
-
-        if ((flags = mbedtls_ssl_get_verify_result(&ssl)) != 0)
-        {
-            ESP_LOGW(TAG, "Failed to verify peer certificate!");
-            bzero(buf, sizeof(buf));
-            mbedtls_x509_crt_verify_info(buf, sizeof(buf), "  ! ", flags);
-            ESP_LOGW(TAG, "verification info: %s", buf);
-        }
-        else {
-            ESP_LOGI(TAG, "Certificate verified.");
-        }
-
-        ESP_LOGI(TAG, "Writing HTTP request...");
-        char *ip_address = "";
-        tcpip_adapter_ip_info_t ip;
-		memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
-		if (tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0) {
-			ip_address = inet_ntoa(ip.ip);
-			quotaIP = ip_address;
-		}
-
-        cJSON *root = cJSON_CreateObject();
-        cJSON_AddStringToObject(root, "ws", (const char *)uc_ssid);
-        cJSON_AddStringToObject(root, "wp", (const char *)uc_pw);
-		cJSON_AddStringToObject(root, "wi", ip_address);
-//		cJSON_AddStringToObject(root, "mac", mac);
-
-        cJSON *gpio18 = cJSON_CreateObject();
-        cJSON_AddNumberToObject(gpio18, "req", 0);
-        cJSON_AddNumberToObject(gpio18, "res", 0);
-        cJSON_AddNumberToObject(gpio18, "sta", 1);
-
-        cJSON *pins = cJSON_CreateObject();
-        cJSON_AddItemToObject(pins, "18", gpio18);
-
-        cJSON_AddItemToObject(root, "ps", pins);
-
-		char url[68];
-		strcpy(url, WEB_URL);
-		strcat( url, uc_mac);
-		strcat( url, ".json"); // access_token will be required in the future
-		printf("%s\n", url);
-
-		char *post = cJSON_Print(root);
-		char len_post[10];
-		snprintf(len_post, sizeof(len_post), "%d", strlen(post));
-
-		char request[512] = "PUT ";
-		strcat(request, url);
-		strcat(request, " HTTP/1.0\r\n");
-		strcat(request, "User-Agent: esp-idf/1.0 esp32\r\n");
-		strcat(request, "Connection: close\r\n");
-		strcat(request, "Host: linhomes-afa8a.firebaseio.com\r\n");
-		strcat(request, "Content-Type: application/json\r\n");
-		strcat(request, "Content-Length: ");
-		strcat(request, len_post);
-		strcat(request, "\r\n");
-		strcat(request, "\r\n");
-		strcat(request, post);
-		REQUEST = request;
-		printf("%s\n", REQUEST);
-		while((ret = mbedtls_ssl_write(&ssl, (const unsigned char *)REQUEST, strlen(REQUEST))) <= 0){
-			if(ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
-				ESP_LOGE(TAG, "mbedtls_ssl_write returned -0x%x", -ret);
-//				return;
-				goto exit;
-			}
-		}
-
-		len = ret;
-		ESP_LOGI(TAG, "%d bytes written", len);
-		ESP_LOGI(TAG, "Reading HTTP response...");
-		do{
-			len = sizeof(buf) - 1;
-			bzero(buf, sizeof(buf));
-			ret = mbedtls_ssl_read(&ssl, (unsigned char *)buf, len);
-
-			if(ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE){
-				continue;
-			}
-			if(ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) {
-				ret = 0;
-				break;
-			}
-			if(ret < 0){
-				ESP_LOGE(TAG, "mbedtls_ssl_read returned -0x%x", -ret);
-				break;
-			}
-			if(ret == 0){
-				ESP_LOGI(TAG, "connection closed");
-				break;
-			}
-			mbedtls_printf("%s", buf);
-		} while(1);
-
-        mbedtls_ssl_close_notify(&ssl);
-
-        cJSON_Delete(root);
-
-    exit:
-        mbedtls_ssl_session_reset(&ssl);
-        mbedtls_net_free(&server_fd);
-
-        if(ret != 0)
-        {
-            mbedtls_strerror(ret, buf, 100);
-            ESP_LOGE(TAG, "Last error was: -0x%x - %s", -ret, buf);
-        }
-//        return;
-//        esp_restart();
-	    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 3, &TaskHandle_get); //NULL
-        vTaskDelete(TaskHandle_push_d);
-    }
-}
-
 static void repair_ip(void *pvParameters){
 	while(1){
 		char *ip_address = "";
@@ -1307,6 +1292,9 @@ void app_main(){
     uint8_t addr[6];
 	esp_efuse_mac_get_default(addr);
 	snprintf(uc_mac, sizeof(uc_mac), "%02x%02x%02x%02x%02x%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+
+	second_time = handle_nvs("st", 0, 0);
+    printf("second_time: %d\n", second_time);
 
 	if(handle_nvs("w_mode", 0, 0) < 1 && strlen((const char *)uc_ssid) > 0){ // neu ket noi duoc wifi truoc do thi bat mode sta
 	    initialise_wifi();
