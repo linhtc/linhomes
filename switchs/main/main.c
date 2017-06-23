@@ -68,6 +68,7 @@
 char uc_mac[18] = "";
 unsigned char uc_ssid[32] = "";
 unsigned char uc_pw[64] = "";
+char uc_ip[16] = "";
 
 /* FreeRTOS event group to signal when we are connected & ready to make a request */
 static EventGroupHandle_t wifi_event_group;
@@ -108,7 +109,6 @@ int second_time = 0;
 //"\r\n"
 //"{\"pwr\":\"off\"}";
 char *REQUEST = "";
-char *quotaIP = "";
 void info_listener(char argv[]);
 
 xTaskHandle TaskHandle_get;
@@ -146,14 +146,14 @@ static int handle_nvs(const char *key, int val, int flag){
 	} else {
 		if(flag == 1){ // Write
 			err = nvs_set_i32(my_handle, key, val);
-			ESP_LOGI(TAG, "\n write %s = %d => %s \n", key, val, ((err != ESP_OK) ? "Failed!\n" : "Done\n"));
+			ESP_LOGW(TAG, "\n write %s = %d => %s \n", key, val, ((err != ESP_OK) ? "Failed!\n" : "Done\n"));
 			err = nvs_commit(my_handle);
 			status = err;
 		} else{ // Read
 			err = nvs_get_i32(my_handle, key, &status);
 			switch (err) {
 				case ESP_OK:
-					ESP_LOGI(TAG, "Read key %s = %d\n", key, status);
+					ESP_LOGW(TAG, "Read key %s = %d\n", key, status);
 					break;
 				case ESP_ERR_NVS_NOT_FOUND:
 					printf("The value is not initialized yet!\n");
@@ -181,16 +181,17 @@ static void handle_snvs(const char *key, char *val, int flag){
 			// Write
 			err = nvs_set_str(my_handle, key, val);
 			err = nvs_commit(my_handle);
-			printf((err != ESP_OK) ? "Failed!\n" : "Done\n");
+//			printf((err != ESP_OK) ? "Failed!\n" : "Done\n");
+			ESP_LOGW(TAG, "\n write %s = %s => %s \n", key, val, ((err != ESP_OK) ? "Failed!\n" : "Done\n"));
 		} else{ // Read
 			size_t size = 32;
 			malloc(size);
 			err = nvs_get_str(my_handle, key, val, &size);
-			ESP_LOGI(TAG, "\ncJSON_Print-----------> %d\n", err);
+			ESP_LOGW(TAG, "\n read %s = %s => %s \n", key, val, ((err != ESP_OK) ? "Failed!\n" : "Done\n"));
 			switch (err) {
 				case ESP_OK:
 					printf("NVS read\n");
-					printf("Key %s = %s\n", key, val);
+					ESP_LOGW(TAG, "Read key %s = %s\n", key, val);
 					break;
 				case ESP_ERR_NVS_NOT_FOUND:
 					printf("The value is not initialized yet!\n");
@@ -226,7 +227,11 @@ static void gpio_task_example(void* arg){
             printf("GPIO[%d] intr, val: %d\n", io_num, gpio_get_level(io_num));
             if(io_num == GPIO_NUM_14){
             	if(handle_nvs("w_mode", 1, 1) == ESP_OK){ // keo chan 13 len cao thi switch sang mode ap
+            		const esp_partition_t* nvs_partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_NVS, NULL);
+					assert(nvs_partition && "partition table must have an NVS partition");
+					ESP_ERROR_CHECK( esp_partition_erase_range(nvs_partition, 0, nvs_partition->size) );
             		gpio_isr_handler_remove(GPIO_NUM_14);
+            	    vTaskDelay(1000 / portTICK_PERIOD_MS);
 					esp_restart();
             		vTaskDelete(NULL);
 				}
@@ -357,7 +362,7 @@ static void push_device(){
 		memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
 		if (tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0) {
 			ip_address = inet_ntoa(ip.ip);
-			quotaIP = ip_address;
+			snprintf(uc_ip, sizeof(uc_ip), "%s", ip_address);
 		}
 
         cJSON *root = cJSON_CreateObject();
@@ -532,7 +537,7 @@ static void https_get_task(void *pvParameters){
 		memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
 		if (tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0) {
 			ip_address = inet_ntoa(ip.ip);
-			quotaIP = ip_address;
+			snprintf(uc_ip, sizeof(uc_ip), "%s", ip_address);
 		}
         printf("Socket connected: %d\n", ws_check_client());
         if(ws_check_client() > 0){ // request via socket, not network
@@ -656,39 +661,46 @@ static void https_get_task(void *pvParameters){
 static esp_err_t event_handler(void *ctx, system_event_t *event){
 	ESP_LOGI(TAG, "\n error id: %d \n", event->event_id);
     switch(event->event_id) {
-        case SYSTEM_EVENT_STA_START:
+        case SYSTEM_EVENT_STA_START:{
             esp_wifi_connect();
             break;
-        case SYSTEM_EVENT_STA_DISCONNECTED:
+        }
+        case SYSTEM_EVENT_STA_DISCONNECTED:{
             esp_wifi_connect();
             xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
             break;
-        case SYSTEM_EVENT_STA_CONNECTED:
-        	if(second_time < 1){
-        		xTaskCreate(&push_device, "push_device", 8192, NULL, 3, &TaskHandle_push_d);
-//        		vTaskDelay(1000 / portTICK_PERIOD_MS);
-//        	    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 4, &TaskHandle_get);
-        	}
-            break;
-        case SYSTEM_EVENT_STA_GOT_IP:
+        }
+        case SYSTEM_EVENT_STA_CONNECTED:{
+        	char *ip_address = "";
+			tcpip_adapter_ip_info_t ip;
+			memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
+			if (tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0) {
+				ip_address = inet_ntoa(ip.ip);
+			}
+        	handle_snvs("wi", ip_address, 1);
+        	break;
+        }
+        case SYSTEM_EVENT_STA_GOT_IP:{
         	ESP_LOGI(TAG, "got ip:%s\n",
     		ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
         	xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
             break;
-        case SYSTEM_EVENT_AP_STACONNECTED:
+        }
+        case SYSTEM_EVENT_AP_STACONNECTED:{
         	ESP_LOGI(TAG, "station:"MACSTR" join,AID=%d\n",
     		MAC2STR(event->event_info.sta_connected.mac),
     		event->event_info.sta_connected.aid);
         	xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
         	break;
-        case SYSTEM_EVENT_AP_STADISCONNECTED:
+        }
+        case SYSTEM_EVENT_AP_STADISCONNECTED:{
         	ESP_LOGI(TAG, "station:"MACSTR"leave,AID=%d\n",
     		MAC2STR(event->event_info.sta_disconnected.mac),
     		event->event_info.sta_disconnected.aid);
         	xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
         	break;
-        default:
-            break;
+        }
+        default: break;
 	}
 	return ESP_OK;
 }
@@ -1056,6 +1068,7 @@ static void control_19(void *pvParameters){
 }
 
 static void repair_ip(void *pvParameters){
+    vTaskDelay(3000 / portTICK_PERIOD_MS);
 	while(1){
 		char *ip_address = "";
 		tcpip_adapter_ip_info_t ip;
@@ -1063,10 +1076,10 @@ static void repair_ip(void *pvParameters){
 		if (tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0) {
 			ip_address = inet_ntoa(ip.ip);
 		}
-		if(strcmp(ip_address, quotaIP) != 0 && strcmp(ip_address, "0.0.0.0") != 0){
+		if(strcmp(ip_address, (char *)uc_ip) != 0 && strcmp(ip_address, "0.0.0.0") != 0){
 			ESP_LOGW(TAG, "should to update ip address");
-			ESP_LOGW(TAG, "ip old %s - new %s", quotaIP, ip_address);
-			quotaIP = ip_address;
+			ESP_LOGW(TAG, "ip old %s - new %s", uc_ip, ip_address);
+			snprintf(uc_ip, sizeof(uc_ip), "%s", ip_address);
 			xTaskCreate(&push_device, "push_device", 8192, NULL, 3, &TaskHandle_push_d);
 		}
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -1091,8 +1104,11 @@ void info_listener(char *buf){
 		ESP_LOGI(TAG, "type is: %d", root->type);
 		if(root->type == 2){ // not found in FireBase
 //			push_device();
-			xTaskCreate(&push_device, "push_device", 8192, NULL, 3, &TaskHandle_push_d);
-	        vTaskDelete(TaskHandle_get);
+        	if(second_time < 1){
+        		xTaskCreate(&push_device, "push_device", 8192, NULL, 3, &TaskHandle_push_d);
+        	}
+	        vTaskDelay(9000 / portTICK_PERIOD_MS);
+//	        vTaskDelete(TaskHandle_get);
 		} else{
 			char *test = cJSON_Print(root);
 			ESP_LOGI(TAG, "\ncJSON_Print----------->\n");
@@ -1120,7 +1136,7 @@ void info_listener(char *buf){
 						xTaskCreate(&control_18, "control_18", 8192, (void*)pin18_request->valueint, 4, &TaskHandle_ctrl_18);
 					}
 				}
-				cJSON *gpio19 = cJSON_GetObjectItem(pins, "18");
+				cJSON *gpio19 = cJSON_GetObjectItem(pins, "19");
 				if(gpio19 != NULL){
 					cJSON *pin19_request = cJSON_GetObjectItem(gpio19, "req");
 					if(pin19_request != NULL){
@@ -1284,8 +1300,11 @@ void app_main(){
 
 	handle_snvs("ssid", (char *)uc_ssid, 0);
 	handle_snvs("pw", (char *)uc_pw, 0);
+	handle_snvs("wi", (char *)uc_ip, 0);
+
 	ESP_LOGI(TAG, "\n uc_ssid: %s \n", uc_ssid);
 	ESP_LOGI(TAG, "\n uc_pw: %s \n", uc_pw);
+	ESP_LOGI(TAG, "\n uc_ip: %s \n", uc_ip);
 
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 
@@ -1296,7 +1315,8 @@ void app_main(){
 	second_time = handle_nvs("st", 0, 0);
     printf("second_time: %d\n", second_time);
 
-	if(handle_nvs("w_mode", 0, 0) < 1 && strlen((const char *)uc_ssid) > 0){ // neu ket noi duoc wifi truoc do thi bat mode sta
+	// neu ket noi duoc wifi truoc do thi bat mode sta
+	if(handle_nvs("w_mode", 0, 0) < 1 && strlen((const char *)uc_ssid) > 0){
 	    initialise_wifi();
 	    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 3, &TaskHandle_get); //NULL
 	    xTaskCreate(&repair_ip, "repair_ip", 8192, NULL, 6, &TaskHandle_repair); //NULL
