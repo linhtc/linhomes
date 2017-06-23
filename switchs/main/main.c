@@ -91,23 +91,12 @@ const int CONNECTED_BIT = BIT0;
 
 #define GPIO_INPUT_PIN_SEL  ((1<<GPIO_NUM_14))
 
-static const char *TAG = "example";
-int second_time = 0;
-//static int count_time = 0;
+static const char *TAG = "switch";
+int count_err = 0;
+int handshake_get = 0;
+bool handshakeing = false;
+bool pushing = false;
 
-//static const char *REQUEST = "GET " WEB_URL " HTTP/1.0\r\n"
-//    "Host: "WEB_SERVER"\r\n"
-//    "User-Agent: esp-idf/1.0 esp32\r\n"
-//    "\r\n";
-
-//static const char *REQUEST = "PUT " WEB_URL " HTTP/1.0\r\n"
-//"User-Agent: esp-idf/1.0 esp32\r\n"
-//"Connection: close\r\n" //general header
-//"Host: "WEB_SERVER"\r\n" //request header
-//"Content-Type: application/json\r\n" //entity header
-//"Content-Length: 13\r\n" //entity header
-//"\r\n"
-//"{\"pwr\":\"off\"}";
 char *REQUEST = "";
 void info_listener(char argv[]);
 
@@ -115,10 +104,7 @@ xTaskHandle TaskHandle_get;
 xTaskHandle TaskHandle_push_i;
 xTaskHandle TaskHandle_repair;
 xTaskHandle TaskHandle_push_d;
-xTaskHandle TaskHandle_ctrl_16;
-xTaskHandle TaskHandle_ctrl_17;
 xTaskHandle TaskHandle_ctrl_18;
-xTaskHandle TaskHandle_ctrl_19;
 
 //WebSocket_frame_f __ws_frame_f;
 
@@ -243,7 +229,7 @@ static void gpio_task_example(void* arg){
 static void push_device(){
     char buf[512];
     int ret, flags, len;
-
+    pushing = true;
     mbedtls_entropy_context entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
     mbedtls_ssl_context ssl;
@@ -259,20 +245,18 @@ static void push_device(){
     mbedtls_ssl_config_init(&conf);
 
     mbedtls_entropy_init(&entropy);
-    if((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
-                                    NULL, 0)) != 0)
-    {
+    if((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, NULL, 0)) != 0) {
+    	pushing = false;
         ESP_LOGE(TAG, "mbedtls_ctr_drbg_seed returned %d", ret);
         abort();
     }
 
     ESP_LOGI(TAG, "Loading the CA root certificate...");
 
-    ret = mbedtls_x509_crt_parse(&cacert, server_root_cert_pem_start,
-                                 server_root_cert_pem_end-server_root_cert_pem_start);
+    ret = mbedtls_x509_crt_parse(&cacert, server_root_cert_pem_start, server_root_cert_pem_end-server_root_cert_pem_start);
 
-    if(ret < 0)
-    {
+    if(ret < 0){
+    	pushing = false;
         ESP_LOGE(TAG, "mbedtls_x509_crt_parse returned -0x%x\n\n", -ret);
         abort();
     }
@@ -305,8 +289,7 @@ static void push_device(){
     mbedtls_esp_enable_debug_log(&conf, 4);
 #endif
 
-    if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
-    {
+    if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0){
         ESP_LOGE(TAG, "mbedtls_ssl_setup returned -0x%x\n\n", -ret);
         goto exit;
     }
@@ -320,9 +303,7 @@ static void push_device(){
 
         ESP_LOGI(TAG, "Connecting to %s:%s...", WEB_SERVER, WEB_PORT);
 
-        if ((ret = mbedtls_net_connect(&server_fd, WEB_SERVER,
-                                      WEB_PORT, MBEDTLS_NET_PROTO_TCP)) != 0)
-        {
+        if ((ret = mbedtls_net_connect(&server_fd, WEB_SERVER, WEB_PORT, MBEDTLS_NET_PROTO_TCP)) != 0){
             ESP_LOGE(TAG, "mbedtls_net_connect returned -%x", -ret);
             goto exit;
         }
@@ -334,10 +315,8 @@ static void push_device(){
 
         ESP_LOGI(TAG, "Performing the SSL/TLS handshake...");
 
-        while ((ret = mbedtls_ssl_handshake(&ssl)) != 0)
-        {
-            if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
-            {
+        while ((ret = mbedtls_ssl_handshake(&ssl)) != 0){
+            if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
                 ESP_LOGE(TAG, "mbedtls_ssl_handshake returned -0x%x", -ret);
                 goto exit;
             }
@@ -345,14 +324,12 @@ static void push_device(){
 
         ESP_LOGI(TAG, "Verifying peer X.509 certificate...");
 
-        if ((flags = mbedtls_ssl_get_verify_result(&ssl)) != 0)
-        {
+        if ((flags = mbedtls_ssl_get_verify_result(&ssl)) != 0){
             ESP_LOGW(TAG, "Failed to verify peer certificate!");
             bzero(buf, sizeof(buf));
             mbedtls_x509_crt_verify_info(buf, sizeof(buf), "  ! ", flags);
             ESP_LOGW(TAG, "verification info: %s", buf);
-        }
-        else {
+        } else {
             ESP_LOGI(TAG, "Certificate verified.");
         }
 
@@ -373,8 +350,8 @@ static void push_device(){
 
         cJSON *gpio18 = cJSON_CreateObject();
         cJSON_AddNumberToObject(gpio18, "req", 0);
-        cJSON_AddNumberToObject(gpio18, "res", 0);
-        cJSON_AddNumberToObject(gpio18, "sta", 1);
+//        cJSON_AddNumberToObject(gpio18, "res", 0);
+//        cJSON_AddNumberToObject(gpio18, "sta", 1);
 
         cJSON *pins = cJSON_CreateObject();
         cJSON_AddItemToObject(pins, "18", gpio18);
@@ -408,7 +385,6 @@ static void push_device(){
 		while((ret = mbedtls_ssl_write(&ssl, (const unsigned char *)REQUEST, strlen(REQUEST))) <= 0){
 			if(ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
 				ESP_LOGE(TAG, "mbedtls_ssl_write returned -0x%x", -ret);
-//				return;
 				goto exit;
 			}
 		}
@@ -450,10 +426,9 @@ static void push_device(){
         if(ret != 0){
             mbedtls_strerror(ret, buf, 100);
             ESP_LOGE(TAG, "Last error was: -0x%x - %s", -ret, buf);
-        } else if(second_time < 1){
-        	if(handle_nvs("st", 1, 1) == ESP_OK){
-        		second_time = 1;
-        	}
+        	pushing = true;
+        } else{
+        	pushing = false;
         }
         vTaskDelete(TaskHandle_push_d);
     }
@@ -478,9 +453,7 @@ static void https_get_task(void *pvParameters){
     mbedtls_ssl_config_init(&conf);
 
     mbedtls_entropy_init(&entropy);
-    if((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
-                                    NULL, 0)) != 0)
-    {
+    if((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, NULL, 0)) != 0) {
         ESP_LOGE(TAG, "mbedtls_ctr_drbg_seed returned %d", ret);
         abort();
     }
@@ -489,16 +462,14 @@ static void https_get_task(void *pvParameters){
 
     ret = mbedtls_x509_crt_parse(&cacert, server_root_cert_pem_start, server_root_cert_pem_end-server_root_cert_pem_start);
 
-    if(ret < 0)
-    {
+    if(ret < 0) {
         ESP_LOGE(TAG, "mbedtls_x509_crt_parse returned -0x%x\n\n", -ret);
         abort();
     }
 
     ESP_LOGI(TAG, "Setting hostname for TLS session...");
 
-    if((ret = mbedtls_ssl_set_hostname(&ssl, WEB_SERVER)) != 0)
-    {
+    if((ret = mbedtls_ssl_set_hostname(&ssl, WEB_SERVER)) != 0) {
         ESP_LOGE(TAG, "mbedtls_ssl_set_hostname returned -0x%x", -ret);
         abort();
     }
@@ -506,16 +477,13 @@ static void https_get_task(void *pvParameters){
     ESP_LOGI(TAG, "Setting up the SSL/TLS structure...");
 
 	mbedtls_ssl_conf_read_timeout(&conf, 9000);
-    if((ret = mbedtls_ssl_config_defaults(&conf,
-                                          MBEDTLS_SSL_IS_CLIENT,
-                                          MBEDTLS_SSL_TRANSPORT_STREAM,
-                                          MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
-    {
-        ESP_LOGE(TAG, "mbedtls_ssl_config_defaults returned %d", ret);
+    if((ret = mbedtls_ssl_config_defaults(&conf, MBEDTLS_SSL_IS_CLIENT,
+		MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT)) != 0 ) {
+    	ESP_LOGE(TAG, "mbedtls_ssl_config_defaults returned %d", ret);
         goto exit;
     }
 
-    mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_REQUIRED);
+    mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
     mbedtls_ssl_conf_ca_chain(&conf, &cacert, NULL);
     mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
 #ifdef CONFIG_MBEDTLS_DEBUG
@@ -528,8 +496,7 @@ static void https_get_task(void *pvParameters){
     }
 
     while(1) {
-        xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT,
-                            false, true, portMAX_DELAY);
+        xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, false, true, portMAX_DELAY);
         ESP_LOGI(TAG, "Connected to AP");
 
         char *ip_address = "";
@@ -539,10 +506,11 @@ static void https_get_task(void *pvParameters){
 			ip_address = inet_ntoa(ip.ip);
 			snprintf(uc_ip, sizeof(uc_ip), "%s", ip_address);
 		}
-        printf("Socket connected: %d\n", ws_check_client());
         if(ws_check_client() > 0){ // request via socket, not network
+            printf("Socket connected: %d\n", 1);
 			goto exit;
         }
+        printf("Socket connected: %d\n", 0);
 
         mbedtls_net_init(&server_fd);
 
@@ -559,7 +527,8 @@ static void https_get_task(void *pvParameters){
         mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
 
         ESP_LOGI(TAG, "Performing the SSL/TLS handshake...");
-
+        handshake_get = 0;
+        handshakeing = true;
         while ((ret = mbedtls_ssl_handshake(&ssl)) != 0){
             ESP_LOGE(TAG, "mbedtls_ssl_handshake returned -0x%x", -ret);
             if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
@@ -570,15 +539,13 @@ static void https_get_task(void *pvParameters){
 
         ESP_LOGI(TAG, "Verifying peer X.509 certificate...");
 
-        if ((flags = mbedtls_ssl_get_verify_result(&ssl)) != 0)
-        {
+        if ((flags = mbedtls_ssl_get_verify_result(&ssl)) != 0){
             /* In real life, we probably want to close connection if ret != 0 */
             ESP_LOGW(TAG, "Failed to verify peer certificate!");
             bzero(buf, sizeof(buf));
             mbedtls_x509_crt_verify_info(buf, sizeof(buf), "  ! ", flags);
             ESP_LOGW(TAG, "verification info: %s", buf);
-        }
-        else {
+        } else {
             ESP_LOGI(TAG, "Certificate verified.");
         }
 
@@ -587,7 +554,7 @@ static void https_get_task(void *pvParameters){
         char url[68];
 		strcpy(url, WEB_URL);
 		strcat( url, uc_mac);
-		strcat( url, ".json"); // access_token will be required in the future
+		strcat( url, "/ps/18.json"); // access_token will be required in the future
 		printf("%s\n", url);
 
 		char request[120] = "GET ";
@@ -599,7 +566,7 @@ static void https_get_task(void *pvParameters){
 		strcat(request, "User-Agent: esp-idf/1.0 esp32\r\n");
 		strcat(request, "Accept: application/json\r\n");
 		strcat(request, "\r\n");
-//		REQUEST = request;
+
 		printf("%s\n", request);
 		while((ret = mbedtls_ssl_write(&ssl, (const unsigned char *)request, strlen(request))) <= 0){
 			if(ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
@@ -611,7 +578,7 @@ static void https_get_task(void *pvParameters){
 		len = ret;
 		ESP_LOGI(TAG, "%d bytes written", len);
 		ESP_LOGI(TAG, "Reading HTTP response...");
-//		mbedtls_printf("%s", buf);
+		char final_buf[512] = "";
 		do{
 			len = sizeof(buf) - 1;
 			bzero(buf, sizeof(buf));
@@ -632,11 +599,9 @@ static void https_get_task(void *pvParameters){
 				ESP_LOGI(TAG, "connection closed");
 				break;
 			}
-			info_listener(buf);
-
-//			ESP_LOGI(TAG, "\ninfo_listener----------->\n");
-//			mbedtls_printf("%s", buf);
+			strcat(final_buf, buf);
 		} while(1);
+		info_listener(final_buf);
 
         mbedtls_ssl_close_notify(&ssl);
 
@@ -644,13 +609,20 @@ static void https_get_task(void *pvParameters){
         mbedtls_ssl_session_reset(&ssl);
         mbedtls_net_free(&server_fd);
 
-        if(ret != 0)
-        {
+        if(ret != 0) {
+        	count_err++;
             mbedtls_strerror(ret, buf, 100);
-            ESP_LOGE(TAG, "Last error was: -0x%x - %s", -ret, buf);
+            ESP_LOGE(TAG, "Last error was: -0x%x - %s in %d times", -ret, buf, count_err);
+            if(count_err >= 9 && ws_check_client() < 1){
+                ESP_LOGI(TAG, "Error have threshold. esp restart after 1s...");
+    			vTaskDelay(1000 / portTICK_PERIOD_MS);
+    			esp_restart();
+            }
+        } else{
+        	count_err = 0;
         }
         ESP_LOGI(TAG, "Starting again after 10s!");
-        for(int countdown = 9; countdown >= 0; countdown--) {
+        for(int countdown = 2; countdown >= 0; countdown--) {
 			ESP_LOGI(TAG, "%d...", countdown);
 			vTaskDelay(1000 / portTICK_PERIOD_MS);
 		}
@@ -983,48 +955,6 @@ static void push_listener(void *pvParameters){
     }
 }
 
-static void control_16(void *pvParameters){
-	int req = (int)pvParameters;
-	int sta = handle_nvs("key16", 0, 0);
-	if(req != sta){
-		ESP_LOGI(TAG, "\n curr16_state %d \n", sta);
-		if(req > 0){
-			gpio_set_level(GPIO_NUM_16, 1);
-			ESP_LOGI(TAG, "\n Turn on GPIO_NUM_16 \n");
-		} else{
-			gpio_set_level(GPIO_NUM_16, 0);
-			ESP_LOGI(TAG, "\n Turn off GPIO_NUM_16 \n");
-		}
-
-		if(handle_nvs("key16", req, 1) == ESP_OK){
-			push_listener(NULL);
-//			 xTaskCreate(&push_listener, "push_listener", 8192, (void*)16, 4, &TaskHandle_push_i);
-		}
-	}
-	vTaskDelete(TaskHandle_ctrl_16);
-}
-
-static void control_17(void *pvParameters){
-	int req = (int)pvParameters;
-	int sta = handle_nvs("key17", 0, 0);
-	if(req != sta){
-		ESP_LOGI(TAG, "\n curr17_state %d \n", sta);
-		if(req > 0){
-			gpio_set_level(GPIO_NUM_17, 1);
-			ESP_LOGI(TAG, "\n Turn on GPIO_NUM_17 \n");
-		} else{
-			gpio_set_level(GPIO_NUM_17, 0);
-			ESP_LOGI(TAG, "\n Turn off GPIO_NUM_17 \n");
-		}
-
-		if(handle_nvs("key17", req, 1) == ESP_OK){
-			push_listener(NULL);
-//			 xTaskCreate(&push_listener, "push_listener", 8192, (void*)17, 4, &TaskHandle_push_i);
-		}
-	}
-	vTaskDelete(TaskHandle_ctrl_17);
-}
-
 static void control_18(void *pvParameters){
 	int req = (int)pvParameters;
 	int sta = handle_nvs("key18", 0, 0);
@@ -1046,27 +976,6 @@ static void control_18(void *pvParameters){
 	vTaskDelete(TaskHandle_ctrl_18);
 }
 
-static void control_19(void *pvParameters){
-	int req = (int)pvParameters;
-	int sta = handle_nvs("key19", 0, 0);
-	if(req != sta){
-		ESP_LOGI(TAG, "\n curr19_state %d \n", sta);
-		if(req > 0){
-			gpio_set_level(GPIO_NUM_19, 1);
-			ESP_LOGI(TAG, "\n Turn on GPIO_NUM_19 \n");
-		} else{
-			gpio_set_level(GPIO_NUM_19, 0);
-			ESP_LOGI(TAG, "\n Turn off GPIO_NUM_19 \n");
-		}
-
-		if(handle_nvs("key19", req, 1) == ESP_OK){
-			push_listener(NULL);
-//			 xTaskCreate(&push_listener, "push_listener", 8192, (void*)19, 4, &TaskHandle_push_i);
-		}
-	}
-	vTaskDelete(TaskHandle_ctrl_19);
-}
-
 static void repair_ip(void *pvParameters){
     vTaskDelay(3000 / portTICK_PERIOD_MS);
 	while(1){
@@ -1082,8 +991,18 @@ static void repair_ip(void *pvParameters){
 			snprintf(uc_ip, sizeof(uc_ip), "%s", ip_address);
 			xTaskCreate(&push_device, "push_device", 8192, NULL, 3, &TaskHandle_push_d);
 		}
+		if(handshakeing && ws_check_client() < 1){
+			handshake_get++;
+		}
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
-    	ESP_LOGI(TAG, "ip %s will restart...", ip_address);
+    	ESP_LOGI(TAG, "ip %s will restart with handshake %d", ip_address, handshake_get);
+    	if(handshake_get > 27){
+        	ESP_LOGW(TAG, "handshake have threshold. restart get task...");
+			vTaskDelete(TaskHandle_get);
+	        handshake_get = 0;
+	        handshakeing = true;
+		    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 3, &TaskHandle_get);
+    	}
 	}
     goto exit;
     exit:
@@ -1104,45 +1023,18 @@ void info_listener(char *buf){
 		ESP_LOGI(TAG, "type is: %d", root->type);
 		if(root->type == 2){ // not found in FireBase
 //			push_device();
-        	if(second_time < 1){
+        	if(!pushing){
         		xTaskCreate(&push_device, "push_device", 8192, NULL, 3, &TaskHandle_push_d);
         	}
-	        vTaskDelay(9000 / portTICK_PERIOD_MS);
+//	        vTaskDelay(9000 / portTICK_PERIOD_MS);
 //	        vTaskDelete(TaskHandle_get);
 		} else{
 			char *test = cJSON_Print(root);
 			ESP_LOGI(TAG, "\ncJSON_Print----------->\n");
 			printf("%s\n\n", test);
-			cJSON *pins = cJSON_GetObjectItem(root, "ps");
-			if(pins != NULL){
-				cJSON *gpio16 = cJSON_GetObjectItem(pins, "16");
-				if(gpio16 != NULL){
-					cJSON *pin16_request = cJSON_GetObjectItem(gpio16, "req");
-					if(pin16_request != NULL){
-						xTaskCreate(&control_16, "control_16", 8192, (void*)pin16_request->valueint, 4, &TaskHandle_ctrl_16);
-					}
-				}
-				cJSON *gpio17 = cJSON_GetObjectItem(pins, "17");
-				if(gpio17 != NULL){
-					cJSON *pin17_request = cJSON_GetObjectItem(gpio17, "req");
-					if(pin17_request != NULL){
-						xTaskCreate(&control_17, "control_17", 8192, (void*)pin17_request->valueint, 4, &TaskHandle_ctrl_17);
-					}
-				}
-				cJSON *gpio18 = cJSON_GetObjectItem(pins, "18");
-				if(gpio18 != NULL){
-					cJSON *pin18_request = cJSON_GetObjectItem(gpio18, "req");
-					if(pin18_request != NULL){
-						xTaskCreate(&control_18, "control_18", 8192, (void*)pin18_request->valueint, 4, &TaskHandle_ctrl_18);
-					}
-				}
-				cJSON *gpio19 = cJSON_GetObjectItem(pins, "19");
-				if(gpio19 != NULL){
-					cJSON *pin19_request = cJSON_GetObjectItem(gpio19, "req");
-					if(pin19_request != NULL){
-						xTaskCreate(&control_19, "control_19", 8192, (void*)pin19_request->valueint, 4, &TaskHandle_ctrl_19);
-					}
-				}
+			cJSON *pin18_request = cJSON_GetObjectItem(root, "req");
+			if(pin18_request != NULL){
+				xTaskCreate(&control_18, "control_18", 8192, (void*)pin18_request->valueint, 4, &TaskHandle_ctrl_18);
 			}
 		}
 	}
@@ -1204,7 +1096,7 @@ void task_process_WebSocket( void *pvParameters ){
 									char *res = cJSON_Print(response);
 									WS_write_data(res, strlen(res));
 									ESP_LOGI(TAG, "\n system will restart after %d seconds \n", 3);
-								    vTaskDelay(3000 / portTICK_PERIOD_MS);
+								    vTaskDelay(100 / portTICK_PERIOD_MS);
 									esp_restart();
 									vTaskDelete(NULL);
 								} else{
@@ -1306,19 +1198,16 @@ void app_main(){
 	ESP_LOGI(TAG, "\n uc_pw: %s \n", uc_pw);
 	ESP_LOGI(TAG, "\n uc_ip: %s \n", uc_ip);
 
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+//    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     uint8_t addr[6];
 	esp_efuse_mac_get_default(addr);
 	snprintf(uc_mac, sizeof(uc_mac), "%02x%02x%02x%02x%02x%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 
-	second_time = handle_nvs("st", 0, 0);
-    printf("second_time: %d\n", second_time);
-
 	// neu ket noi duoc wifi truoc do thi bat mode sta
 	if(handle_nvs("w_mode", 0, 0) < 1 && strlen((const char *)uc_ssid) > 0){
 	    initialise_wifi();
-	    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 3, &TaskHandle_get); //NULL
+	    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 3, &TaskHandle_get);
 	    xTaskCreate(&repair_ip, "repair_ip", 8192, NULL, 6, &TaskHandle_repair); //NULL
 	} else{ // neu truoc do ket noi ap that bai 10 lan thi chuyen mode
 		initialise_ap();
