@@ -1051,6 +1051,7 @@ void task_process_WebSocket( void *pvParameters ){
     WebSocket_rx_queue = xQueueCreate(10,sizeof(WebSocket_frame_t));
 
     while (1){
+    	printf("\n I am here... while %d \n", __RX_frame.frame_header.opcode);
         //receive next WebSocket frame from queue
         if(xQueueReceive(WebSocket_rx_queue,&__RX_frame, 3*portTICK_PERIOD_MS)==pdTRUE){
 

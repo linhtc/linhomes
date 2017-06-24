@@ -124,8 +124,7 @@ static void ws_server_netconn_serve(struct netconn *conn) {
 	WS_frame_header_t* p_frame_hdr;
 
 	//allocate memory for SHA1 input
-	p_SHA1_Inp = pvPortMallocCaps(WS_CLIENT_KEY_L + sizeof(WS_sec_conKey),
-			MALLOC_CAP_8BIT);
+	p_SHA1_Inp = pvPortMallocCaps(WS_CLIENT_KEY_L + sizeof(WS_sec_conKey), MALLOC_CAP_8BIT);
 
 	//allocate memory for SHA1 result
 	p_SHA1_result = pvPortMallocCaps(SHA1_RES_L, MALLOC_CAP_8BIT);
@@ -154,12 +153,10 @@ static void ws_server_netconn_serve(struct netconn *conn) {
 					p_SHA1_Inp[i] = *(p_buf + sizeof(WS_sec_WS_keys) + i);
 
 				// calculate hash
-				esp_sha(SHA1, (unsigned char*) p_SHA1_Inp, strlen(p_SHA1_Inp),
-						(unsigned char*) p_SHA1_result);
+				esp_sha(SHA1, (unsigned char*) p_SHA1_Inp, strlen(p_SHA1_Inp), (unsigned char*) p_SHA1_result);
 
 				//hex to base64
-				p_buf = (char*) _base64_encode((unsigned char*) p_SHA1_result,
-						SHA1_RES_L, (size_t*) &i);
+				p_buf = (char*) _base64_encode((unsigned char*) p_SHA1_result, SHA1_RES_L, (size_t*) &i);
 
 				//free SHA1 input
 				free(p_SHA1_Inp);
@@ -168,9 +165,7 @@ static void ws_server_netconn_serve(struct netconn *conn) {
 				free(p_SHA1_result);
 
 				//allocate memory for handshake
-				p_payload = pvPortMallocCaps(
-						sizeof(WS_srv_hs) + i - WS_SPRINTF_ARG_L,
-						MALLOC_CAP_8BIT);
+				p_payload = pvPortMallocCaps(sizeof(WS_srv_hs) + i - WS_SPRINTF_ARG_L, MALLOC_CAP_8BIT);
 
 				//check if malloc suceeded
 				if (p_payload != NULL) {
@@ -179,8 +174,7 @@ static void ws_server_netconn_serve(struct netconn *conn) {
 					sprintf(p_payload, WS_srv_hs, i - 1, p_buf);
 
 					//send handshake
-					netconn_write(conn, p_payload, strlen(p_payload),
-							NETCONN_COPY);
+					netconn_write(conn, p_payload, strlen(p_payload), NETCONN_COPY);
 
 					//free base 64 encoded sec key
 					free(p_buf);
@@ -191,6 +185,7 @@ static void ws_server_netconn_serve(struct netconn *conn) {
 					//set pointer to open WebSocket connection
 					WS_conn = conn;
 					__ws_frame_f.conencted = 1;
+
 					//Wait for new data
 					while (netconn_recv(conn, &inbuf) == ERR_OK) {
 
@@ -222,10 +217,8 @@ static void ws_server_netconn_serve(struct netconn *conn) {
 								if (p_payload != NULL) {
 
 									//decode playload
-									for (i = 0; i < p_frame_hdr->payload_length;
-											i++)
-										p_payload[i] = (p_buf + WS_MASK_L)[i]
-												^ p_buf[i % WS_MASK_L];
+									for (i = 0; i < p_frame_hdr->payload_length; i++)
+										p_payload[i] = (p_buf + WS_MASK_L)[i] ^ p_buf[i % WS_MASK_L];
 												
 									//add 0 terminator
 									p_payload[p_frame_hdr->payload_length] = 0;
