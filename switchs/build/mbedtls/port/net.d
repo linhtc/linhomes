@@ -62,6 +62,7 @@ port/net.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/port/arch/cc.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/errno.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/errno.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/port/arch/sys_arch.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h \
@@ -78,7 +79,6 @@ port/net.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/rom/ets_sys.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/soc/esp32/include/soc/soc.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_assert.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/projdefs.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/portable.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/deprecated_definitions.h \
@@ -230,6 +230,8 @@ port/net.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/errno.h:
 
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:
+
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/port/arch/sys_arch.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/FreeRTOS.h:
@@ -261,8 +263,6 @@ port/net.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/soc/esp32/include/soc/soc.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_assert.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/projdefs.h:
 

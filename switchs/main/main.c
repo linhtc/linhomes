@@ -94,6 +94,8 @@ const int CONNECTED_BIT = BIT0;
 static const char *TAG = "switch";
 int count_err = 0;
 int handshake_get = 0;
+int handshake_ws = 0;
+int pin_state = -1;
 bool handshakeing = false;
 bool pushing = false;
 
@@ -529,6 +531,7 @@ static void https_get_task(void *pvParameters){
         ESP_LOGI(TAG, "Performing the SSL/TLS handshake...");
         handshake_get = 0;
         handshakeing = true;
+    	mbedtls_ssl_conf_read_timeout(&conf, 3000);
         while ((ret = mbedtls_ssl_handshake(&ssl)) != 0){
             ESP_LOGE(TAG, "mbedtls_ssl_handshake returned -0x%x", -ret);
             if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
@@ -622,10 +625,10 @@ static void https_get_task(void *pvParameters){
         	count_err = 0;
         }
         ESP_LOGI(TAG, "Starting again after 10s!");
-        for(int countdown = 2; countdown >= 0; countdown--) {
-			ESP_LOGI(TAG, "%d...", countdown);
-			vTaskDelay(1000 / portTICK_PERIOD_MS);
-		}
+//        for(int countdown = 2; countdown >= 0; countdown--) {
+//			ESP_LOGI(TAG, "%d...", countdown);
+//			vTaskDelay(1000 / portTICK_PERIOD_MS);
+//		}
 //        vTaskDelete(TaskHandle_get);
     }
 }
@@ -686,11 +689,11 @@ static void initialise_wifi(void){
     ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
 
     wifi_sta_config_t sta = {
-    	.ssid = "Leon ESP32",
-		.password = "11330232"
+    	.ssid = "MOBILE STAR WiFi",
+		.password = "mobiist@r2017"
     };
-    memcpy(sta.ssid, uc_ssid, sizeof(uc_ssid));
-    memcpy(sta.password, uc_pw, sizeof(uc_pw));
+//    memcpy(sta.ssid, uc_ssid, sizeof(uc_ssid));
+//    memcpy(sta.password, uc_pw, sizeof(uc_pw));
     wifi_config_t wifi_config = {
         .sta = sta,
     };
@@ -957,9 +960,12 @@ static void push_listener(void *pvParameters){
 
 static void control_18(void *pvParameters){
 	int req = (int)pvParameters;
-	int sta = handle_nvs("key18", 0, 0);
-	if(req != sta){
-		ESP_LOGI(TAG, "\n curr18_state %d \n", sta);
+	if(pin_state == -1){
+		int sta = handle_nvs("key18", 0, 0);
+		pin_state = sta;
+	}
+	if(req != pin_state){
+		ESP_LOGI(TAG, "\n curr18_state %d \n", pin_state);
 		if(req > 0){
 			gpio_set_level(GPIO_NUM_18, 1);
 			ESP_LOGI(TAG, "\n Turn on GPIO_NUM_18 \n");
@@ -969,6 +975,7 @@ static void control_18(void *pvParameters){
 		}
 
 		if(handle_nvs("key18", req, 1) == ESP_OK){
+			pin_state = req;
 			push_listener(NULL);
 //			 xTaskCreate(&push_listener, "push_listener", 8192, (void*)18, 4, &TaskHandle_push_i);
 		}
@@ -994,14 +1001,25 @@ static void repair_ip(void *pvParameters){
 		if(handshakeing && ws_check_client() < 1){
 			handshake_get++;
 		}
+		if(ws_check_client() == 1){
+			handshake_ws++;
+		}
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
     	ESP_LOGI(TAG, "ip %s will restart with handshake %d", ip_address, handshake_get);
-    	if(handshake_get > 27){
+    	if(handshake_get > 6){
         	ESP_LOGW(TAG, "handshake have threshold. restart get task...");
 			vTaskDelete(TaskHandle_get);
 	        handshake_get = 0;
 	        handshakeing = true;
-		    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 3, &TaskHandle_get);
+//		    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 3, &TaskHandle_get);
+		    xTaskCreatePinnedToCore(&https_get_task, "https_get_task", 8192, NULL, 5, &TaskHandle_get, 1);
+    	}
+    	if(handshake_ws > 6){
+        	ESP_LOGW(TAG, "handshake ws have threshold. disconnect...");
+        	handshake_ws = 0;
+    	    WebSocket_frame_t __RX_frame;
+    		netconn_close(__RX_frame.conenction);
+    		netconn_delete(__RX_frame.conenction);
     	}
 	}
     goto exit;
@@ -1024,7 +1042,8 @@ void info_listener(char *buf){
 		if(root->type == 2){ // not found in FireBase
 //			push_device();
         	if(!pushing){
-        		xTaskCreate(&push_device, "push_device", 8192, NULL, 3, &TaskHandle_push_d);
+//        		xTaskCreate(&push_device, "push_device", 8192, NULL, 3, &TaskHandle_push_d);
+        	    xTaskCreatePinnedToCore(&push_device, "push_device", 8192, NULL, 5, &TaskHandle_push_d, 1);
         	}
 //	        vTaskDelay(9000 / portTICK_PERIOD_MS);
 //	        vTaskDelete(TaskHandle_get);
@@ -1051,7 +1070,6 @@ void task_process_WebSocket( void *pvParameters ){
     WebSocket_rx_queue = xQueueCreate(10,sizeof(WebSocket_frame_t));
 
     while (1){
-    	printf("\n I am here... while %d \n", __RX_frame.frame_header.opcode);
         //receive next WebSocket frame from queue
         if(xQueueReceive(WebSocket_rx_queue,&__RX_frame, 3*portTICK_PERIOD_MS)==pdTRUE){
 
@@ -1064,8 +1082,13 @@ void task_process_WebSocket( void *pvParameters ){
         		cJSON *cmd = cJSON_GetObjectItem(socketQ, "cmd");
         		if(cmd != NULL){
 					ESP_LOGI(TAG, "\n cmd --> %d \n", cmd->valueint);
-        			switch (cmd->valueint){ // 1 => ack -> info, 2 set ssid, 3 control pin
-						case 1:{ // get info
+        			switch (cmd->valueint){ // 0 => ack, 1 -> info, 2 set ssid, 3 control pin
+        				case 0:{
+        					handshake_ws = 0;
+							cJSON_AddNumberToObject(response, "ack", 1);
+        					break;
+        				}
+        				case 1:{ // get info
 							ESP_LOGI(TAG, "\n cmd 1 --> %d \n", cmd->valueint);
 							int val18 = handle_nvs("key18", 0, 0);
 		        			cJSON_AddNumberToObject(response, "p18", val18);
@@ -1208,7 +1231,8 @@ void app_main(){
 	// neu ket noi duoc wifi truoc do thi bat mode sta
 	if(handle_nvs("w_mode", 0, 0) < 1 && strlen((const char *)uc_ssid) > 0){
 	    initialise_wifi();
-	    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 3, &TaskHandle_get);
+//	    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 3, &TaskHandle_get);
+	    xTaskCreatePinnedToCore(&https_get_task, "https_get_task", 8192, NULL, 5, &TaskHandle_get, 1);
 	    xTaskCreate(&repair_ip, "repair_ip", 8192, NULL, 6, &TaskHandle_repair); //NULL
 	} else{ // neu truoc do ket noi ap that bai 10 lan thi chuyen mode
 		initialise_ap();
