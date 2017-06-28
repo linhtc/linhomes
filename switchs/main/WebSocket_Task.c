@@ -293,3 +293,9 @@ void ws_server(void *pvParameters) {
 int ws_check_client() {
 	return __ws_frame_f.conencted;
 }
+
+void ws_set_client() {
+	__ws_frame_f.conencted = 0;
+	netconn_close(WS_conn);
+	netconn_delete(WS_conn);
+}

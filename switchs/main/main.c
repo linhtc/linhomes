@@ -109,6 +109,7 @@ xTaskHandle TaskHandle_push_d;
 xTaskHandle TaskHandle_ctrl_18;
 
 //WebSocket_frame_f __ws_frame_f;
+WebSocket_frame_t __RX_frame;
 
 /* Root cert for howsmyssl.com, taken from server_root_cert.pem
    The PEM file was extracted from the output of this command:
@@ -510,6 +511,7 @@ static void https_get_task(void *pvParameters){
 		}
         if(ws_check_client() > 0){ // request via socket, not network
             printf("Socket connected: %d\n", 1);
+			vTaskDelay(1000 / portTICK_PERIOD_MS);
 			goto exit;
         }
         printf("Socket connected: %d\n", 0);
@@ -533,7 +535,6 @@ static void https_get_task(void *pvParameters){
         handshakeing = true;
     	mbedtls_ssl_conf_read_timeout(&conf, 3000);
         while ((ret = mbedtls_ssl_handshake(&ssl)) != 0){
-            ESP_LOGE(TAG, "mbedtls_ssl_handshake returned -0x%x", -ret);
             if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
                 ESP_LOGE(TAG, "mbedtls_ssl_handshake returned -0x%x", -ret);
                 goto exit;
@@ -615,11 +616,14 @@ static void https_get_task(void *pvParameters){
         if(ret != 0) {
         	count_err++;
             mbedtls_strerror(ret, buf, 100);
-            ESP_LOGE(TAG, "Last error was: -0x%x - %s in %d times", -ret, buf, count_err);
-            if(count_err >= 9 && ws_check_client() < 1){
-                ESP_LOGI(TAG, "Error have threshold. esp restart after 1s...");
-    			vTaskDelay(1000 / portTICK_PERIOD_MS);
-    			esp_restart();
+            if(ws_check_client() < 1){
+                ESP_LOGE(TAG, "Last error was: -0x%x - %s in %d times", -ret, buf, count_err);
+            } else{
+                if(count_err >= 9){
+                    ESP_LOGI(TAG, "Error have threshold. esp restart after 1s...");
+        			vTaskDelay(1000 / portTICK_PERIOD_MS);
+        			esp_restart();
+                }
             }
         } else{
         	count_err = 0;
@@ -692,8 +696,8 @@ static void initialise_wifi(void){
     	.ssid = "MOBILE STAR WiFi",
 		.password = "mobiist@r2017"
     };
-//    memcpy(sta.ssid, uc_ssid, sizeof(uc_ssid));
-//    memcpy(sta.password, uc_pw, sizeof(uc_pw));
+    memcpy(sta.ssid, uc_ssid, sizeof(uc_ssid));
+    memcpy(sta.password, uc_pw, sizeof(uc_pw));
     wifi_config_t wifi_config = {
         .sta = sta,
     };
@@ -1017,9 +1021,7 @@ static void repair_ip(void *pvParameters){
     	if(handshake_ws > 6){
         	ESP_LOGW(TAG, "handshake ws have threshold. disconnect...");
         	handshake_ws = 0;
-    	    WebSocket_frame_t __RX_frame;
-    		netconn_close(__RX_frame.conenction);
-    		netconn_delete(__RX_frame.conenction);
+        	ws_set_client(); /* remove ws connection */
     	}
 	}
     goto exit;
@@ -1064,7 +1066,7 @@ void task_process_WebSocket( void *pvParameters ){
     (void)pvParameters;
 
     //frame buffer
-    WebSocket_frame_t __RX_frame;
+//    WebSocket_frame_t __RX_frame;
 
     //create WebSocket RX Queue
     WebSocket_rx_queue = xQueueCreate(10,sizeof(WebSocket_frame_t));

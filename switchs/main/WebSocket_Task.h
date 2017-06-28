@@ -76,6 +76,11 @@ void ws_server(void *pvParameters);
 /**
  * \brief ws_check_client task
  */
+void ws_set_client();
+
+/**
+ * \brief ws_check_client task
+ */
 int ws_check_client();
 
 #endif /* _WEBSOCKET_TASK_H_ */
