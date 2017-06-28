@@ -102,6 +102,7 @@ bool pushing = false;
 char *REQUEST = "";
 void info_listener(char argv[]);
 
+xTaskHandle TaskHandle_ws;
 xTaskHandle TaskHandle_get;
 xTaskHandle TaskHandle_push_i;
 xTaskHandle TaskHandle_repair;
@@ -500,6 +501,12 @@ static void https_get_task(void *pvParameters){
 
     while(1) {
         xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, false, true, portMAX_DELAY);
+        if(ws_check_client() > 0){ // request via socket, not network
+//            printf("Socket connected: %d\n", 1);
+//			vTaskDelay(1000 / portTICK_PERIOD_MS);
+			goto exit;
+        }
+        handshake_ws = 0;
         ESP_LOGI(TAG, "Connected to AP");
 
         char *ip_address = "";
@@ -509,11 +516,6 @@ static void https_get_task(void *pvParameters){
 			ip_address = inet_ntoa(ip.ip);
 			snprintf(uc_ip, sizeof(uc_ip), "%s", ip_address);
 		}
-        if(ws_check_client() > 0){ // request via socket, not network
-            printf("Socket connected: %d\n", 1);
-			vTaskDelay(1000 / portTICK_PERIOD_MS);
-			goto exit;
-        }
         printf("Socket connected: %d\n", 0);
 
         mbedtls_net_init(&server_fd);
@@ -628,7 +630,7 @@ static void https_get_task(void *pvParameters){
         } else{
         	count_err = 0;
         }
-        ESP_LOGI(TAG, "Starting again after 10s!");
+//        ESP_LOGI(TAG, "Starting again after 10s!");
 //        for(int countdown = 2; countdown >= 0; countdown--) {
 //			ESP_LOGI(TAG, "%d...", countdown);
 //			vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -1002,27 +1004,29 @@ static void repair_ip(void *pvParameters){
 			snprintf(uc_ip, sizeof(uc_ip), "%s", ip_address);
 			xTaskCreate(&push_device, "push_device", 8192, NULL, 3, &TaskHandle_push_d);
 		}
-		if(handshakeing && ws_check_client() < 1){
-			handshake_get++;
-		}
+//		if(handshakeing && ws_check_client() < 1){
+//			handshake_get++;
+//		}
 		if(ws_check_client() == 1){
+			handshake_get = 0;
 			handshake_ws++;
 		}
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
-    	ESP_LOGI(TAG, "ip %s will restart with handshake %d", ip_address, handshake_get);
-    	if(handshake_get > 6){
-        	ESP_LOGW(TAG, "handshake have threshold. restart get task...");
-			vTaskDelete(TaskHandle_get);
-	        handshake_get = 0;
-	        handshakeing = true;
-//		    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 3, &TaskHandle_get);
-		    xTaskCreatePinnedToCore(&https_get_task, "https_get_task", 8192, NULL, 5, &TaskHandle_get, 1);
-    	}
-    	if(handshake_ws > 6){
+//    	if(handshake_get > 6){
+//        	ESP_LOGW(TAG, "handshake have threshold. restart get task...");
+//			vTaskDelete(TaskHandle_get);
+//	        handshake_get = 0;
+//	        handshakeing = true;
+//			vTaskDelay(3000 / portTICK_PERIOD_MS);
+////		    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 3, &TaskHandle_get);
+//		    xTaskCreatePinnedToCore(&https_get_task, "https_get_task", 8192, NULL, 5, &TaskHandle_get, 1);
+//    	}
+    	if(handshake_ws > 7){
         	ESP_LOGW(TAG, "handshake ws have threshold. disconnect...");
         	handshake_ws = 0;
         	ws_set_client(); /* remove ws connection */
     	}
+    	ESP_LOGI(TAG, "ip %s will restart with get: %d, ws: %d", ip_address, handshake_get, handshake_ws);
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
     goto exit;
     exit:
@@ -1122,7 +1126,7 @@ void task_process_WebSocket( void *pvParameters ){
 									char *res = cJSON_Print(response);
 									WS_write_data(res, strlen(res));
 									ESP_LOGI(TAG, "\n system will restart after %d seconds \n", 3);
-								    vTaskDelay(100 / portTICK_PERIOD_MS);
+								    vTaskDelay(1000 / portTICK_PERIOD_MS);
 									esp_restart();
 									vTaskDelete(NULL);
 								} else{
@@ -1173,11 +1177,6 @@ void task_process_WebSocket( void *pvParameters ){
 }
 
 void app_main(){
-	//	gpio_set_direction(GPIO_NUM_16, GPIO_MODE_OUTPUT);
-	//	gpio_set_direction(GPIO_NUM_17, GPIO_MODE_OUTPUT);
-//	gpio_set_direction(GPIO_NUM_18, GPIO_MODE_OUTPUT);
-	//	gpio_set_direction(GPIO_NUM_19, GPIO_MODE_OUTPUT);
-//
 	esp_err_t err = nvs_flash_init();
 	if (err == ESP_ERR_NVS_NO_FREE_PAGES) {
 		// NVS partition was truncated and needs to be erased
@@ -1188,27 +1187,14 @@ void app_main(){
 		err = nvs_flash_init();
 	}
 
-//	handle_snvs((const char *)"ssid", (char *)uc_ssid, 0);
-//	handle_snvs((const char *)"pw", (char *)uc_pw, 0);
-
 	ESP_ERROR_CHECK( err );
 	gpio_set_direction(GPIO_NUM_18, GPIO_MODE_OUTPUT);
 
-//	int val16 = handle_nvs("key16", 0, 0);
-//	ESP_LOGI(TAG, "\n key16 status: %d \n", val16);
-//	gpio_set_level(GPIO_NUM_16, val16);
-//	int val17 = handle_nvs("key17", 0, 0);
-//	ESP_LOGI(TAG, "\n key17 status: %d \n", val17);
-//	gpio_set_level(GPIO_NUM_17, val17);
 	int val18 = handle_nvs("key18", 0, 0);
 	ESP_LOGI(TAG, "\n key18 status: %d \n", val18);
 	if(val18 >= 0){
 		gpio_set_level(GPIO_NUM_18, val18);
 	}
-//	int val19 = handle_nvs("key19", 0, 0);
-//	ESP_LOGI(TAG, "\n key19 status: %d \n", val19);
-//	gpio_set_level(GPIO_NUM_19, val19);
-
 	gpio_set_direction(GPIO_NUM_14, GPIO_MODE_INPUT);
 	gpio_set_intr_type(GPIO_NUM_14, GPIO_INTR_POSEDGE);
 	gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
@@ -1224,8 +1210,6 @@ void app_main(){
 	ESP_LOGI(TAG, "\n uc_pw: %s \n", uc_pw);
 	ESP_LOGI(TAG, "\n uc_ip: %s \n", uc_ip);
 
-//    vTaskDelay(1000 / portTICK_PERIOD_MS);
-
     uint8_t addr[6];
 	esp_efuse_mac_get_default(addr);
 	snprintf(uc_mac, sizeof(uc_mac), "%02x%02x%02x%02x%02x%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
@@ -1240,12 +1224,13 @@ void app_main(){
 		initialise_ap();
 	}
 //    create WebSocker receive task
-    xTaskCreate(&task_process_WebSocket, "ws_process_rx", 2048, NULL, 5, NULL);
+//    xTaskCreate(&task_process_WebSocket, "ws_process_rx", 2048, NULL, 5, NULL);
+    xTaskCreatePinnedToCore(&task_process_WebSocket, "ws_process_rx", 8192, NULL, 4, &TaskHandle_ws, 1);
 
 //    Create Websocket Server Task
     xTaskCreate(&ws_server, "ws_server", 2048, NULL, 5, NULL);
 
-    printf("check socket connected: %d\n", ws_check_client());
+//    printf("check socket connected: %d\n", ws_check_client());
 //	ESP_LOGI(TAG, "\n ws_frame_f: %d \n", connected_f);
 
 }
