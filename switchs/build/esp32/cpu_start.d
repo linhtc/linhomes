@@ -136,7 +136,7 @@ cpu_start.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_coexist.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_panic.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_core_dump.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_app_trace.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/app_trace/include/esp_app_trace.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_clk.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/xtensa-debug-module/include/trax.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/xtensa-debug-module/include/eri.h \
@@ -414,7 +414,7 @@ cpu_start.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_core_dump.h:
 
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_app_trace.h:
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/app_trace/include/esp_app_trace.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_clk.h:
 

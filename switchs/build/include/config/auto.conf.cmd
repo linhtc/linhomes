@@ -1,4 +1,5 @@
 deps_config := \
+	/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/app_trace/Kconfig \
 	/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/aws_iot/Kconfig \
 	/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/bt/Kconfig \
 	/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/Kconfig \

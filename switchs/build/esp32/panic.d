@@ -76,7 +76,8 @@ panic.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_core_dump.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/spi_flash/include/esp_spi_flash.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_cache_err_int.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_app_trace.h
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/app_trace/include/esp_app_trace.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/portmacro.h
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h:
 
@@ -230,4 +231,6 @@ panic.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_cache_err_int.h:
 
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_app_trace.h:
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/app_trace/include/esp_app_trace.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/portmacro.h:
