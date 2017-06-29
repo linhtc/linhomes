@@ -1,7 +1,5 @@
-# Hello World Example
+# Switch project
 
-Starts a FreeRTOS task to print "Hello World"
-
-See the README.md file in the upper level 'examples' directory for more information about examples.
-
-https://github.com/SuperHouse/esp-open-rtos/issues/182#issuecomment-239059555
+Connect device to AP and control via phone.
+Basically for fun for life.
+But it work very well :D
