@@ -110,7 +110,7 @@ xTaskHandle TaskHandle_push_d;
 xTaskHandle TaskHandle_ctrl_18;
 
 //WebSocket_frame_f __ws_frame_f;
-WebSocket_frame_t __RX_frame;
+//WebSocket_frame_t __RX_frame;
 
 /* Root cert for howsmyssl.com, taken from server_root_cert.pem
    The PEM file was extracted from the output of this command:
@@ -535,7 +535,6 @@ static void https_get_task(void *pvParameters){
         ESP_LOGI(TAG, "Performing the SSL/TLS handshake...");
         handshake_get = 0;
         handshakeing = true;
-    	mbedtls_ssl_conf_read_timeout(&conf, 3000);
         while ((ret = mbedtls_ssl_handshake(&ssl)) != 0){
             if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
                 ESP_LOGE(TAG, "mbedtls_ssl_handshake returned -0x%x", -ret);
@@ -992,6 +991,7 @@ static void control_18(void *pvParameters){
 static void repair_ip(void *pvParameters){
     vTaskDelay(3000 / portTICK_PERIOD_MS);
 	while(1){
+        xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, false, true, portMAX_DELAY);
 		char *ip_address = "";
 		tcpip_adapter_ip_info_t ip;
 		memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
@@ -1004,23 +1004,23 @@ static void repair_ip(void *pvParameters){
 			snprintf(uc_ip, sizeof(uc_ip), "%s", ip_address);
 			xTaskCreate(&push_device, "push_device", 8192, NULL, 3, &TaskHandle_push_d);
 		}
-//		if(handshakeing && ws_check_client() < 1){
-//			handshake_get++;
-//		}
+		if(handshakeing && ws_check_client() < 1){
+			handshake_get++;
+		}
 		if(ws_check_client() == 1){
 			handshake_get = 0;
 			handshake_ws++;
 		}
-//    	if(handshake_get > 6){
-//        	ESP_LOGW(TAG, "handshake have threshold. restart get task...");
+    	if(handshake_get > 9){
+        	ESP_LOGW(TAG, "handshake have threshold. restart get task...");
 //			vTaskDelete(TaskHandle_get);
 //	        handshake_get = 0;
 //	        handshakeing = true;
 //			vTaskDelay(3000 / portTICK_PERIOD_MS);
 ////		    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 3, &TaskHandle_get);
 //		    xTaskCreatePinnedToCore(&https_get_task, "https_get_task", 8192, NULL, 5, &TaskHandle_get, 1);
-//    	}
-    	if(handshake_ws > 7){
+    	}
+    	if(handshake_ws > 9){
         	ESP_LOGW(TAG, "handshake ws have threshold. disconnect...");
         	handshake_ws = 0;
         	ws_set_client(); /* remove ws connection */
@@ -1070,7 +1070,7 @@ void task_process_WebSocket( void *pvParameters ){
     (void)pvParameters;
 
     //frame buffer
-//    WebSocket_frame_t __RX_frame;
+    WebSocket_frame_t __RX_frame;
 
     //create WebSocket RX Queue
     WebSocket_rx_queue = xQueueCreate(10,sizeof(WebSocket_frame_t));
