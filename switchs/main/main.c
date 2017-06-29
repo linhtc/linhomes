@@ -92,11 +92,9 @@ const int CONNECTED_BIT = BIT0;
 #define GPIO_INPUT_PIN_SEL  ((1<<GPIO_NUM_14))
 
 static const char *TAG = "switch";
-int count_err = 0;
-int handshake_get = 0;
 int handshake_ws = 0;
 int pin_state = -1;
-bool handshakeing = false;
+bool rebuild_get = false; // tracking vTask was deleted
 bool pushing = false;
 
 char *REQUEST = "";
@@ -502,8 +500,6 @@ static void https_get_task(void *pvParameters){
     while(1) {
         xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, false, true, portMAX_DELAY);
         if(ws_check_client() > 0){ // request via socket, not network
-//            printf("Socket connected: %d\n", 1);
-//			vTaskDelay(1000 / portTICK_PERIOD_MS);
 			goto exit;
         }
         handshake_ws = 0;
@@ -533,8 +529,6 @@ static void https_get_task(void *pvParameters){
         mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
 
         ESP_LOGI(TAG, "Performing the SSL/TLS handshake...");
-        handshake_get = 0;
-        handshakeing = true;
         while ((ret = mbedtls_ssl_handshake(&ssl)) != 0){
             if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
                 ESP_LOGE(TAG, "mbedtls_ssl_handshake returned -0x%x", -ret);
@@ -610,31 +604,16 @@ static void https_get_task(void *pvParameters){
 
         mbedtls_ssl_close_notify(&ssl);
 
-    exit:
-        mbedtls_ssl_session_reset(&ssl);
-        mbedtls_net_free(&server_fd);
+	exit:
+		mbedtls_ssl_session_reset(&ssl);
+		mbedtls_net_free(&server_fd);
 
-        if(ret != 0) {
-        	count_err++;
-            mbedtls_strerror(ret, buf, 100);
-            if(ws_check_client() < 1){
-                ESP_LOGE(TAG, "Last error was: -0x%x - %s in %d times", -ret, buf, count_err);
-            } else{
-                if(count_err >= 9){
-                    ESP_LOGI(TAG, "Error have threshold. esp restart after 1s...");
-        			vTaskDelay(1000 / portTICK_PERIOD_MS);
-        			esp_restart();
-                }
-            }
-        } else{
-        	count_err = 0;
-        }
-//        ESP_LOGI(TAG, "Starting again after 10s!");
-//        for(int countdown = 2; countdown >= 0; countdown--) {
-//			ESP_LOGI(TAG, "%d...", countdown);
-//			vTaskDelay(1000 / portTICK_PERIOD_MS);
-//		}
-//        vTaskDelete(TaskHandle_get);
+		if(ret != 0) {
+			mbedtls_strerror(ret, buf, 100);
+			if(ws_check_client() < 1){
+				ESP_LOGE(TAG, "Last error was: -0x%x - %s", -ret, buf);
+			}
+		}
     }
 }
 
@@ -1004,66 +983,52 @@ static void repair_ip(void *pvParameters){
 			snprintf(uc_ip, sizeof(uc_ip), "%s", ip_address);
 			xTaskCreate(&push_device, "push_device", 8192, NULL, 3, &TaskHandle_push_d);
 		}
-		if(handshakeing && ws_check_client() < 1){
-			handshake_get++;
-		}
-		if(ws_check_client() == 1){
-			handshake_get = 0;
+		if(ws_check_client() == 1){ /* ws connected -> remove get task */
 			handshake_ws++;
 		}
-    	if(handshake_get > 9){
-        	ESP_LOGW(TAG, "handshake have threshold. restart get task...");
-//			vTaskDelete(TaskHandle_get);
-//	        handshake_get = 0;
-//	        handshakeing = true;
-//			vTaskDelay(3000 / portTICK_PERIOD_MS);
-////		    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 3, &TaskHandle_get);
-//		    xTaskCreatePinnedToCore(&https_get_task, "https_get_task", 8192, NULL, 5, &TaskHandle_get, 1);
-    	}
     	if(handshake_ws > 9){
         	ESP_LOGW(TAG, "handshake ws have threshold. disconnect...");
-        	handshake_ws = 0;
-        	ws_set_client(); /* remove ws connection */
+//        	handshake_ws = 0;
+//        	ws_set_client(); /* remove ws connection */
     	}
-    	ESP_LOGI(TAG, "ip %s will restart with get: %d, ws: %d", ip_address, handshake_get, handshake_ws);
+    	ESP_LOGI(TAG, "ip %s will restart with ws: %d", ip_address,  handshake_ws);
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
-    goto exit;
-    exit:
-    	ESP_LOGI(TAG, "monitor ip address has exited...");
 }
 
 void info_listener(char *buf){
-	const char needle[10] = "\r\n\r\n";
-	char *response;
-	response = strstr(buf, needle);
-	if(response == NULL){
-		response = buf;
-	}
-	cJSON *root = cJSON_Parse(response);
-	if(root == NULL){
-		ESP_LOGE(TAG, "\nNot JSON format----------->\n");
-	} else{
-		ESP_LOGI(TAG, "type is: %d", root->type);
-		if(root->type == 2){ // not found in FireBase
-//			push_device();
-        	if(!pushing){
-//        		xTaskCreate(&push_device, "push_device", 8192, NULL, 3, &TaskHandle_push_d);
-        	    xTaskCreatePinnedToCore(&push_device, "push_device", 8192, NULL, 5, &TaskHandle_push_d, 1);
-        	}
-//	        vTaskDelay(9000 / portTICK_PERIOD_MS);
-//	        vTaskDelete(TaskHandle_get);
+	if(ws_check_client() < 1){
+		const char needle[10] = "\r\n\r\n";
+		char *response;
+		response = strstr(buf, needle);
+		if(response == NULL){
+			response = buf;
+		}
+		cJSON *root = cJSON_Parse(response);
+		if(root == NULL){
+			ESP_LOGE(TAG, "\nNot JSON format----------->\n");
 		} else{
-			char *test = cJSON_Print(root);
-			ESP_LOGI(TAG, "\ncJSON_Print----------->\n");
-			printf("%s\n\n", test);
-			cJSON *pin18_request = cJSON_GetObjectItem(root, "req");
-			if(pin18_request != NULL){
-				xTaskCreate(&control_18, "control_18", 8192, (void*)pin18_request->valueint, 4, &TaskHandle_ctrl_18);
+			ESP_LOGI(TAG, "type is: %d", root->type);
+			if(root->type == 2){ // not found in FireBase
+	//			push_device();
+				if(!pushing){
+	//        		xTaskCreate(&push_device, "push_device", 8192, NULL, 3, &TaskHandle_push_d);
+					xTaskCreatePinnedToCore(&push_device, "push_device", 8192, NULL, 5, &TaskHandle_push_d, 1);
+				}
+	//	        vTaskDelay(9000 / portTICK_PERIOD_MS);
+	//	        vTaskDelete(TaskHandle_get);
+			} else{
+				char *test = cJSON_Print(root);
+				ESP_LOGI(TAG, "\ncJSON_Print----------->\n");
+				printf("%s\n\n", test);
+				cJSON *pin18_request = cJSON_GetObjectItem(root, "req");
+				if(pin18_request != NULL){
+					xTaskCreate(&control_18, "control_18", 8192, (void*)pin18_request->valueint, 4, &TaskHandle_ctrl_18);
+				}
 			}
 		}
+		cJSON_Delete(root);
 	}
-	cJSON_Delete(root);
 }
 
 void task_process_WebSocket( void *pvParameters ){
@@ -1218,14 +1183,15 @@ void app_main(){
 	if(handle_nvs("w_mode", 0, 0) < 1 && strlen((const char *)uc_ssid) > 0){
 	    initialise_wifi();
 //	    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 3, &TaskHandle_get);
-	    xTaskCreatePinnedToCore(&https_get_task, "https_get_task", 8192, NULL, 5, &TaskHandle_get, 1);
-	    xTaskCreate(&repair_ip, "repair_ip", 8192, NULL, 6, &TaskHandle_repair); //NULL
+	    xTaskCreatePinnedToCore(&https_get_task, "https_get_task", 8192, NULL, 2, &TaskHandle_get, 1);
+//	    xTaskCreate(&repair_ip, "repair_ip", 8192, NULL, 6, &TaskHandle_repair); //NULL
+//	    xTaskCreatePinnedToCore(&repair_ip, "repair_ip", 8192, NULL, 3, &TaskHandle_repair, 1);
 	} else{ // neu truoc do ket noi ap that bai 10 lan thi chuyen mode
 		initialise_ap();
 	}
 //    create WebSocker receive task
-//    xTaskCreate(&task_process_WebSocket, "ws_process_rx", 2048, NULL, 5, NULL);
-    xTaskCreatePinnedToCore(&task_process_WebSocket, "ws_process_rx", 8192, NULL, 4, &TaskHandle_ws, 1);
+    xTaskCreate(&task_process_WebSocket, "ws_process_rx", 2048, NULL, 5, NULL);
+//    xTaskCreatePinnedToCore(&task_process_WebSocket, "ws_process_rx", 8192, NULL, 1, &TaskHandle_ws, 1);
 
 //    Create Websocket Server Task
     xTaskCreate(&ws_server, "ws_server", 2048, NULL, 5, NULL);
