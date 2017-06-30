@@ -196,8 +196,10 @@ static void ws_server_netconn_serve(struct netconn *conn) {
 						p_frame_hdr = (WS_frame_header_t*) buf;
 
 						//check if clients wants to close the connection
-						if (p_frame_hdr->opcode == WS_OP_CLS)
+						if (p_frame_hdr->opcode == WS_OP_CLS){
+							__ws_frame_f.conencted = 0;
 							break;
+						}
 
 						//get payload length
 						if (p_frame_hdr->payload_length <= WS_STD_LEN) {
@@ -291,11 +293,10 @@ void ws_server(void *pvParameters) {
 }
 
 int ws_check_client() {
-	return __ws_frame_f.conencted;
+	return (WS_conn == NULL) ? 0 : 1;
 }
 
-void ws_set_client() {
-	__ws_frame_f.conencted = 0;
+void ws_rst_client() {
 	netconn_close(WS_conn);
 	netconn_delete(WS_conn);
 }

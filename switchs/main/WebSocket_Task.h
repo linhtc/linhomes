@@ -74,12 +74,12 @@ err_t WS_write_data(char* p_data, size_t length);
 void ws_server(void *pvParameters);
 
 /**
- * \brief ws_check_client task
+ * \brief reset ws connection
  */
-void ws_set_client();
+void ws_rst_client();
 
 /**
- * \brief ws_check_client task
+ * \brief check state of connection
  */
 int ws_check_client();
 
