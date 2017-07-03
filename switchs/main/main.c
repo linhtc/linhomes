@@ -92,6 +92,7 @@ const int CONNECTED_BIT = BIT0;
 #define GPIO_INPUT_PIN_SEL  ((1<<GPIO_NUM_14))
 
 static const char *TAG = "switch";
+unsigned int offline_time = 0;
 int handshake_ws = 0;
 int pin_state = -1;
 bool rebuild_g = false;
@@ -481,7 +482,7 @@ static void https_get_task(void *pvParameters){
         goto exit;
     }
 
-    mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
+    mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_REQUIRED);
     mbedtls_ssl_conf_ca_chain(&conf, &cacert, NULL);
     mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
 #ifdef CONFIG_MBEDTLS_DEBUG
@@ -520,12 +521,16 @@ static void https_get_task(void *pvParameters){
 //        mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
         mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
 
+		if (ws_check_client() > 0){
+			ESP_LOGW(TAG, "mbedtls_ssl_handshake stopped before -> ws connected");
+			goto exit;
+		}
         ESP_LOGI(TAG, "Performing the SSL/TLS handshake...");
         while ((ret = mbedtls_ssl_handshake(&ssl)) != 0){
-//            if (ws_check_client() > 0){
-//                ESP_LOGW(TAG, "mbedtls_ssl_handshake stopped -> ws connected");
-//                goto exit;
-//            }
+            if (ws_check_client() > 0){
+                ESP_LOGW(TAG, "mbedtls_ssl_handshake stopped -> ws connected");
+                break;
+            }
             if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
                 ESP_LOGE(TAG, "mbedtls_ssl_handshake returned -0x%x", -ret);
                 goto exit;
@@ -563,7 +568,15 @@ static void https_get_task(void *pvParameters){
 		strcat(request, "\r\n");
 
 		printf("%s\n", request);
+		if (ws_check_client() > 0){
+			ESP_LOGW(TAG, "mbedtls_ssl_write stopped before -> ws connected");
+			goto exit;
+		}
 		while((ret = mbedtls_ssl_write(&ssl, (const unsigned char *)request, strlen(request))) <= 0){
+			if (ws_check_client() > 0){
+				ESP_LOGW(TAG, "mbedtls_ssl_write stopped -> ws connected");
+				break;
+			}
 			if(ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
 				ESP_LOGE(TAG, "mbedtls_ssl_write returned -0x%x", -ret);
 				goto exit;
@@ -572,9 +585,17 @@ static void https_get_task(void *pvParameters){
 
 		len = ret;
 		ESP_LOGI(TAG, "%d bytes written", len);
+		if (ws_check_client() > 0){
+			ESP_LOGW(TAG, "mbedtls_ssl_read stopped before -> ws connected");
+			goto exit;
+		}
 		ESP_LOGI(TAG, "Reading HTTP response...");
 		char final_buf[512] = "";
 		do{
+			if (ws_check_client() > 0){
+				ESP_LOGW(TAG, "mbedtls_ssl_read stopped -> ws connected");
+				break;
+			}
 			len = sizeof(buf) - 1;
 			bzero(buf, sizeof(buf));
 			ret = mbedtls_ssl_read(&ssl, (unsigned char *)buf, len);
@@ -596,6 +617,10 @@ static void https_get_task(void *pvParameters){
 			}
 			strcat(final_buf, buf);
 		} while(1);
+		if (ws_check_client() > 0){
+			ESP_LOGW(TAG, "mbedtls_ssl_read stopped before -> ws connected");
+			goto exit;
+		}
 		info_listener(final_buf);
 
         mbedtls_ssl_close_notify(&ssl);
@@ -622,21 +647,22 @@ static esp_err_t event_handler(void *ctx, system_event_t *event){
             break;
         }
         case SYSTEM_EVENT_STA_DISCONNECTED:{
+        	offline_time++;
+			ESP_LOGW(TAG, "offline time: %d", offline_time);
+			if(offline_time > 1000){
+				ESP_LOGW(TAG, "system will be restart with threshold: %d", offline_time);
+				esp_restart();
+			}
             esp_wifi_connect();
             xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
             break;
         }
         case SYSTEM_EVENT_STA_CONNECTED:{
-//        	char *ip_address = "";
-//			tcpip_adapter_ip_info_t ip;
-//			memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
-//			if (tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0) {
-//				ip_address = inet_ntoa(ip.ip);
-//			}
-//        	handle_snvs("wi", ip_address, 1);
+        	offline_time = 0;
         	break;
         }
         case SYSTEM_EVENT_STA_GOT_IP:{
+        	offline_time = 0;
         	ESP_LOGI(TAG, "got ip:%s\n",
     		ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
         	xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
@@ -1137,7 +1163,7 @@ void task_process_WebSocket( void *pvParameters ){
 
         }
 
-    	if(handshake_ws > 6 && !ws_ack){ // need to send wake up cmd to slave
+    	if(handshake_ws > 3 && !ws_ack){ // need to send wake up cmd to slave
 			ws_ack = true;
     		cJSON *response = cJSON_CreateObject();
     		cJSON_AddNumberToObject(response, "ack", 1);
@@ -1145,7 +1171,7 @@ void task_process_WebSocket( void *pvParameters ){
     		esp_err_t err = WS_write_data(res, strlen(res));
 			ESP_LOGW(TAG, "wake up slave -> %d", err);
     	}
-    	if(handshake_ws > 12 && ws_ack){
+    	if(handshake_ws > 5 && ws_ack){
 			ESP_LOGW(TAG, "ws_rst_client");
 			handshake_ws = 0;
 			ws_ack = false;
