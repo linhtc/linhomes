@@ -494,7 +494,7 @@ static void https_get_task(void *pvParameters){
 }
 
 static esp_err_t event_handler(void *ctx, system_event_t *event){
-	ESP_LOGI(TAG, "\n error id: %d \n", event->event_id);
+	ESP_LOGI(TAG, "event_handler res: %d", event->event_id);
     switch(event->event_id) {
         case SYSTEM_EVENT_STA_START:{
             esp_wifi_connect();
