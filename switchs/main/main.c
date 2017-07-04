@@ -229,7 +229,7 @@ static void control_18(void *pvParameters){
 		int sta = handle_nvs("key18", 0, 0);
 		pin_state = sta;
 	}
-	if(req != pin_state){
+	if(req >= 0 && req != pin_state){
 		ESP_LOGI(TAG, "\n curr18_state %d \n", pin_state);
 		if(req > 0){
 			gpio_set_level(GPIO_NUM_18, 1);
