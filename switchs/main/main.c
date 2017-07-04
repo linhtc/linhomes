@@ -225,24 +225,20 @@ static void gpio_task_example(void* arg){
 
 static void control_18(void *pvParameters){
 	int req = (int)pvParameters;
-	if(pin_state == -1){
-		int sta = handle_nvs("key18", 0, 0);
-		pin_state = sta;
+	if(pin_state < 0){
+		pin_state = handle_nvs("key18", 0, 0);
 	}
 	if(req >= 0 && req != pin_state){
-		ESP_LOGI(TAG, "\n curr18_state %d \n", pin_state);
+		ESP_LOGI(TAG, "curr18_state %d", pin_state);
 		if(req > 0){
 			gpio_set_level(GPIO_NUM_18, 1);
-			ESP_LOGI(TAG, "\n Turn on GPIO_NUM_18 \n");
+			ESP_LOGI(TAG, "Turn on GPIO_NUM_18");
 		} else{
 			gpio_set_level(GPIO_NUM_18, 0);
-			ESP_LOGI(TAG, "\n Turn off GPIO_NUM_18 \n");
+			ESP_LOGI(TAG, "Turn off GPIO_NUM_18");
 		}
-
 		if(handle_nvs("key18", req, 1) == ESP_OK){
 			pin_state = req;
-//			push_listener(NULL);
-//			 xTaskCreate(&push_listener, "push_listener", 8192, (void*)18, 4, &TaskHandle_push_i);
 		}
 	}
 	vTaskDelete(TaskHandle_ctrl_18);
@@ -451,10 +447,6 @@ static void https_get_task(void *pvParameters){
 		}
 		printf("%s\n", REQUEST);
 		while((ret = mbedtls_ssl_write(&ssl, (const unsigned char *)REQUEST, strlen(REQUEST))) <= 0){
-//			if (ws_check_client() > 0){
-//				ESP_LOGW(TAG, "mbedtls_ssl_write stopped -> ws connected");
-//				break;
-//			}
 			if(ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
 				ESP_LOGE(TAG, "mbedtls_ssl_write returned -0x%x", -ret);
 				goto exit;
@@ -463,17 +455,9 @@ static void https_get_task(void *pvParameters){
 
 		len = ret;
 		ESP_LOGI(TAG, "%d bytes written", len);
-//		if (ws_check_client() > 0){
-//			ESP_LOGW(TAG, "mbedtls_ssl_read stopped before -> ws connected");
-//			goto exit;
-//		}
 		ESP_LOGI(TAG, "Reading HTTP response...");
 		char final_buf[256] = "";
 		do{
-//			if (ws_check_client() > 0){
-//				ESP_LOGW(TAG, "mbedtls_ssl_read stopped -> ws connected");
-//				break;
-//			}
 			len = sizeof(buf) - 1;
 			bzero(buf, sizeof(buf));
 			ret = mbedtls_ssl_read(&ssl, (unsigned char *)buf, len);
@@ -495,10 +479,6 @@ static void https_get_task(void *pvParameters){
 			}
 			strcat(final_buf, buf);
 		} while(1);
-//		if (ws_check_client() > 0){
-//			ESP_LOGW(TAG, "mbedtls_ssl_read stopped before -> ws connected");
-//			goto exit;
-//		}
 		info_listener(final_buf);
 
         mbedtls_ssl_close_notify(&ssl);
@@ -673,11 +653,12 @@ void task_process_WebSocket( void *pvParameters ){
         		if(cmd != NULL){
 					ESP_LOGI(TAG, "cmd --> %d", cmd->valueint);
 					handshake_ws = 0;
+					ws_ack = false;
         			switch (cmd->valueint){ // 0 => ack, 1 -> info, 2 set ssid, 3 control pin
         				case 0:{
 							cJSON_AddNumberToObject(response, "status", 1);
 		        			cJSON_AddNumberToObject(response, "p18", pin_state);
-							ws_ack = false;
+//							ws_ack = false;
         					break;
         				}
         				case 1:{ // get info
@@ -744,12 +725,8 @@ void task_process_WebSocket( void *pvParameters ){
 					}
         		}
 				char *res = cJSON_Print(response);
-//				ESP_LOGI(TAG, "\n %s \n", res);
-//				ESP_LOGI(TAG, "\n len frame: %d \n", strlen(res));
 				esp_err_t err = WS_write_data(res, strlen(res));
-//				ESP_LOGI(TAG, "\n res %d \n", err);
 				ESP_LOGI(TAG, "send %s -> %d", res, err);
-//				free(response);
         	} else{
             	//loop back frame
             	WS_write_data(__RX_frame.payload, __RX_frame.payload_length);
