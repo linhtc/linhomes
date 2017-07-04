@@ -93,7 +93,8 @@ const int CONNECTED_BIT = BIT0;
 
 static const char *TAG = "switch";
 unsigned int offline_time = 0;
-int handshake_ws = 0;
+unsigned int handshake_ws = 0;
+unsigned int gettask_err = 0;
 int pin_state = -1;
 bool rebuild_g = false;
 bool pushing = false;
@@ -484,7 +485,15 @@ static void https_get_task(void *pvParameters){
 		mbedtls_net_free(&server_fd);
 		if(ret != 0) {
 			mbedtls_strerror(ret, buf, 100);
-			ESP_LOGE(TAG, "Last error was: -0x%x - %s", -ret, buf);
+			gettask_err++;
+			ESP_LOGE(TAG, "Last error was: -0x%x - %s in %d times", -ret, buf, gettask_err);
+			if(gettask_err > 5 && ws_check_client() < 1){ // error in loop - 6 times
+				ESP_LOGW(TAG, "many error in get task -> esp restart");
+				esp_restart();
+				vTaskDelete(NULL);
+			}
+		} else{
+			gettask_err = 0;
 		}
     }
 }
@@ -729,7 +738,7 @@ void task_process_WebSocket( void *pvParameters ){
 
         }
 
-    	if(handshake_ws > 3 && !ws_ack){ // need to send wake up cmd to slave
+    	if(handshake_ws > 2 && !ws_ack){ // need to send wake up cmd to slave
 			ws_ack = true;
     		cJSON *response = cJSON_CreateObject();
     		cJSON_AddNumberToObject(response, "ack", 1);
