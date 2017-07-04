@@ -449,7 +449,6 @@ static void https_get_task(void *pvParameters){
 			strcat(request, "\r\n");
 			REQUEST = request;
 		}
-		ESP_LOGW(TAG, "pushing %d", pushing ? 1 : 0);
 		printf("%s\n", REQUEST);
 		while((ret = mbedtls_ssl_write(&ssl, (const unsigned char *)REQUEST, strlen(REQUEST))) <= 0){
 //			if (ws_check_client() > 0){
