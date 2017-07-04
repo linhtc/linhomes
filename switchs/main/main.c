@@ -775,9 +775,9 @@ void app_main(){
 	handle_snvs("pw", (char *)uc_pw, 0);
 	handle_snvs("wi", (char *)uc_ip, 0);
 
-	ESP_LOGI(TAG, "\n uc_ssid: %s \n", uc_ssid);
-	ESP_LOGI(TAG, "\n uc_pw: %s \n", uc_pw);
-	ESP_LOGI(TAG, "\n uc_ip: %s \n", uc_ip);
+	ESP_LOGI(TAG, "uc_ssid: %s", uc_ssid);
+	ESP_LOGI(TAG, "uc_pw: %s", uc_pw);
+	ESP_LOGI(TAG, "uc_ip: %s", uc_ip);
 
     uint8_t addr[6];
 	esp_efuse_mac_get_default(addr);
@@ -797,6 +797,6 @@ void app_main(){
 
 //    Create Websocket Server Task
 //    xTaskCreate(&ws_server, "ws_server", 2048, NULL, 5, NULL);
-    xTaskCreatePinnedToCore(&ws_server, "ws_server", 2048, NULL, 4, NULL, 1);
+    xTaskCreatePinnedToCore(&ws_server, "ws_server", 2048, NULL, 4, NULL, 0);
 
 }
