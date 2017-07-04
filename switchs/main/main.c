@@ -100,11 +100,8 @@ bool pushing = false;
 bool ws_ack = false;
 
 char *REQUEST = "";
-xTaskHandle TaskHandle_ws;
 xTaskHandle TaskHandle_get;
-xTaskHandle TaskHandle_push_i;
 xTaskHandle TaskHandle_repair;
-xTaskHandle TaskHandle_push_d;
 xTaskHandle TaskHandle_ctrl_18;
 
 /* Root cert for howsmyssl.com, taken from server_root_cert.pem
@@ -403,7 +400,6 @@ static void https_get_task(void *pvParameters){
 
 			cJSON *pins = cJSON_CreateObject();
 			cJSON_AddItemToObject(pins, "18", gpio18);
-
 			cJSON_AddItemToObject(root, "ps", pins);
 
 	        char url[68];
@@ -416,7 +412,7 @@ static void https_get_task(void *pvParameters){
 			char len_post[10];
 			snprintf(len_post, sizeof(len_post), "%d", strlen(post));
 
-			char request[512] = "PUT ";
+			char request[384] = "PUT ";
 			strcat(request, url);
 			strcat(request, " HTTP/1.0\r\n");
 			strcat(request, "User-Agent: esp-idf/1.0 esp32\r\n");
@@ -434,7 +430,7 @@ static void https_get_task(void *pvParameters){
 			strcpy(url, WEB_URL);
 			strcat( url, uc_mac);
 			strcat( url, "/ps/18.json"); // access_token will be required in the future
-			char request[120] = "GET ";
+			char request[256] = "GET ";
 			strcat(request, url);
 			strcat(request, " HTTP/1.1\r\n");
 			strcat(request, "User-Agent: esp-idf/1.0 esp32\r\n");
@@ -445,7 +441,7 @@ static void https_get_task(void *pvParameters){
 			strcat(request, "\r\n");
 			REQUEST = request;
 		}
-		printf("%s\n", REQUEST);
+		printf("req -> %s\nreq size -> %d\n", REQUEST, strlen(REQUEST));
 		while((ret = mbedtls_ssl_write(&ssl, (const unsigned char *)REQUEST, strlen(REQUEST))) <= 0){
 			if(ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
 				ESP_LOGE(TAG, "mbedtls_ssl_write returned -0x%x", -ret);
@@ -601,7 +597,6 @@ static void initialise_ap(void){
 static void repair_ip(void *pvParameters){
     vTaskDelay(3000 / portTICK_PERIOD_MS);
 	while(1){
-        xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, false, true, portMAX_DELAY);
 		char *ip_address = "";
 		tcpip_adapter_ip_info_t ip;
 		memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
@@ -613,17 +608,13 @@ static void repair_ip(void *pvParameters){
 			ESP_LOGW(TAG, "ip old %s - new %s", uc_ip, ip_address);
 			snprintf(uc_ip, sizeof(uc_ip), "%s", ip_address);
 			handle_snvs("wi", (char *)uc_ip, 1);
-//			xTaskCreate(&push_device, "push_device", 8192, NULL, 3, &TaskHandle_push_d);
+			pushing = true; // rewrite data to FireBase
 		}
 		if(ws_check_client() == 1){ /* ws connected -> remove get task */
 			handshake_ws++;
 	    	ESP_LOGI(TAG, "ip lookup at %s -> ws: %d", ip_address,  handshake_ws);
 		} else{
 	    	ESP_LOGI(TAG, "ip lookup at %s", ip_address);
-//	    	if(rebuild_g){
-//	    		rebuild_g = false;
-//	    		xTaskCreatePinnedToCore(&https_get_task, "https_get_task", 8192, NULL, 4, &TaskHandle_get, 1);
-//	    	}
 		}
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
@@ -795,17 +786,17 @@ void app_main(){
 	// neu ket noi duoc wifi truoc do thi bat mode sta
 	if(handle_nvs("w_mode", 0, 0) < 1 && strlen((const char *)uc_ssid) > 0){
 	    initialise_wifi();
-	    xTaskCreatePinnedToCore(&https_get_task, "https_get_task", 8192, NULL, 4, &TaskHandle_get, 1);
+	    xTaskCreatePinnedToCore(&https_get_task, "https_get_task", 8192, NULL, 5, &TaskHandle_get, 1);
 	    xTaskCreate(&repair_ip, "repair_ip", 8192, NULL, 6, &TaskHandle_repair); //NULL
 	} else{ // neu truoc do ket noi ap that bai 10 lan thi chuyen mode
 		initialise_ap();
 	}
 //    create WebSocker receive task
 //    xTaskCreate(&task_process_WebSocket, "ws_process_rx", 2048, NULL, 5, NULL);
-    xTaskCreatePinnedToCore(&task_process_WebSocket, "ws_process_rx", 2048, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(&task_process_WebSocket, "ws_process_rx", 2048, NULL, 4, NULL, 0);
 
 //    Create Websocket Server Task
 //    xTaskCreate(&ws_server, "ws_server", 2048, NULL, 5, NULL);
-    xTaskCreatePinnedToCore(&ws_server, "ws_server", 2048, NULL, 5, NULL, 1);
+    xTaskCreatePinnedToCore(&ws_server, "ws_server", 2048, NULL, 4, NULL, 1);
 
 }
