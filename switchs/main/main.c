@@ -261,9 +261,7 @@ static void info_listener(char *buf){
 	} else{
 		ESP_LOGI(TAG, "type is: %d", root->type);
 		if(root->type == 2){ // not found in FireBase
-			ESP_LOGW(TAG, "pushing to FireBase");
 			if(!pushing){
-				ESP_LOGW(TAG, "pushing to FireBase -> pushing");
 				pushing = true;
 			}
 		} else{
@@ -398,6 +396,7 @@ static void https_get_task(void *pvParameters){
 		// if pushing then enable push mode
 		if(pushing){
 			pushing = false;
+			ESP_LOGW(TAG, "pushing to FireBase -> pushing");
 			cJSON *root = cJSON_CreateObject();
 			cJSON_AddStringToObject(root, "ws", (const char *)uc_ssid);
 			cJSON_AddStringToObject(root, "wp", (const char *)uc_pw);
@@ -434,7 +433,7 @@ static void https_get_task(void *pvParameters){
 			strcat(request, "\r\n");
 			strcat(request, post);
 			REQUEST = request;
-		} else{
+		} else{ // only get device info
 	        char url[68];
 			strcpy(url, WEB_URL);
 			strcat( url, uc_mac);
