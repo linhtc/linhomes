@@ -666,17 +666,9 @@ void task_process_WebSocket( void *pvParameters ){
 		        			cJSON_AddNumberToObject(response, "p18", val18);
 		        			uint8_t addr[6];
 							esp_efuse_mac_get_default(addr);
-							char mac[18];
-							snprintf(mac, sizeof(mac), "%02x-%02x-%02x-%02x-%02x-%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
-							char *ip_address = "";
-							tcpip_adapter_ip_info_t ip;
-							memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
-							if (tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0) {
-								ip_address = inet_ntoa(ip.ip);
-							}
 							cJSON_AddStringToObject(response, "ws", (const char *)uc_ssid);
 							cJSON_AddStringToObject(response, "wp", (const char *)uc_pw);
-							cJSON_AddStringToObject(response, "wi", ip_address);
+							cJSON_AddStringToObject(response, "wi", uc_ip);
 							cJSON_AddNumberToObject(response, "status", 1);
 							break;
 						}
