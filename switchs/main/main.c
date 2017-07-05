@@ -335,6 +335,10 @@ static void https_get_task(void *pvParameters){
     }
 
     while(1) {
+    	while(ws_check_client() > 0){
+
+		}
+        printf("WS num: %d\n", ws_check_client());
         xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, false, true, portMAX_DELAY);
         ESP_LOGI(TAG, "Connected to AP");
 
@@ -345,7 +349,6 @@ static void https_get_task(void *pvParameters){
 			ip_address = inet_ntoa(ip.ip);
 			snprintf(uc_ip, sizeof(uc_ip), "%s", ip_address);
 		}
-        printf("Socket connected: %d\n", ws_check_client());
 
         mbedtls_net_init(&server_fd);
 
@@ -356,17 +359,13 @@ static void https_get_task(void *pvParameters){
             goto exit;
         }
 
-        ESP_LOGI(TAG, "FCM Connected.");
+        ESP_LOGI(TAG, "Connected to FireBase");
 
 //        mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
         mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
 
         ESP_LOGI(TAG, "Performing the SSL/TLS handshake...");
         while ((ret = mbedtls_ssl_handshake(&ssl)) != 0){
-//            if (ws_check_client() > 0){
-//                ESP_LOGW(TAG, "mbedtls_ssl_handshake stopped -> ws connected");
-//                break;
-//            }
             if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
                 ESP_LOGE(TAG, "mbedtls_ssl_handshake returned -0x%x", -ret);
                 goto exit;
@@ -517,7 +516,8 @@ static esp_err_t event_handler(void *ctx, system_event_t *event){
             break;
         }
         case SYSTEM_EVENT_STA_CONNECTED:{
-        	offline_time = 0;
+//        	offline_time = 0;
+			ESP_LOGW(TAG, "connected: %d", offline_time);
         	break;
         }
         case SYSTEM_EVENT_STA_GOT_IP:{
@@ -658,7 +658,6 @@ void task_process_WebSocket( void *pvParameters ){
         				case 0:{
 							cJSON_AddNumberToObject(response, "status", 1);
 		        			cJSON_AddNumberToObject(response, "p18", pin_state);
-//							ws_ack = false;
         					break;
         				}
         				case 1:{ // get info
@@ -738,19 +737,22 @@ void task_process_WebSocket( void *pvParameters ){
 
         }
 
-    	if(handshake_ws > 2 && !ws_ack){ // need to send wake up cmd to slave
+        // disconnect ws
+    	if(handshake_ws > 5 && ws_ack){
+			ESP_LOGW(TAG, "ws_rst_client");
+			handshake_ws = 0;
+			ws_ack = false;
+    		ws_rst_client();
+    	}
+
+    	// need to send wake up cmd to slave
+    	if(handshake_ws > 2 && !ws_ack){
 			ws_ack = true;
     		cJSON *response = cJSON_CreateObject();
     		cJSON_AddNumberToObject(response, "ack", 1);
 			char *res = cJSON_Print(response);
     		esp_err_t err = WS_write_data(res, strlen(res));
 			ESP_LOGW(TAG, "wake up slave -> %d", err);
-    	}
-    	if(handshake_ws > 5 && ws_ack){
-			ESP_LOGW(TAG, "ws_rst_client");
-			handshake_ws = 0;
-			ws_ack = false;
-    		ws_rst_client();
     	}
     }
 }
