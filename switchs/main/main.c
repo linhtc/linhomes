@@ -507,7 +507,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event){
         case SYSTEM_EVENT_STA_DISCONNECTED:{
         	offline_time++;
 			ESP_LOGW(TAG, "offline time: %d", offline_time);
-			if(offline_time > 1000){
+			if(offline_time > 120){
 				ESP_LOGW(TAG, "system will be restart with threshold: %d", offline_time);
 				esp_restart();
 			}
