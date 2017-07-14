@@ -24,6 +24,10 @@ mcpwm.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/rom/ets_sys.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/soc/esp32/include/soc/soc.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_err.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_intr.h \
@@ -42,9 +46,6 @@ mcpwm.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/xtensa_config.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/projdefs.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/portable.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/deprecated_definitions.h \
@@ -127,6 +128,14 @@ mcpwm.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_assert.h:
 
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h:
+
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_err.h:
@@ -162,12 +171,6 @@ mcpwm.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/xtensa_config.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/projdefs.h:
 

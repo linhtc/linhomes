@@ -23,6 +23,11 @@ vfs_uart.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/types.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/types.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/stdio.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/stat.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/time.h \
@@ -31,8 +36,7 @@ vfs_uart.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/vfs/include/sys/dirent.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_attr.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/errno.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/soc/esp32/include/soc/uart_struct.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/soc/esp32/include/soc/uart_struct.h
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/string.h:
 
@@ -80,6 +84,16 @@ vfs_uart.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/stdio.h:
 
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h:
+
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/stat.h:
@@ -97,5 +111,3 @@ vfs_uart.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/errno.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/soc/esp32/include/soc/uart_struct.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:

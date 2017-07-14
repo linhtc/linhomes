@@ -34,6 +34,8 @@ nghttp2/lib/nghttp2_hd.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nghttp/nghttp2/lib/nghttp2_int.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nghttp/nghttp2/lib/nghttp2_mem.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nghttp/nghttp2/lib/nghttp2_rcbuf.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nghttp/nghttp2/lib/nghttp2_helper.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nghttp/nghttp2/lib/nghttp2_debug.h
@@ -105,6 +107,10 @@ nghttp2/lib/nghttp2_hd.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nghttp/nghttp2/lib/nghttp2_mem.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nghttp/nghttp2/lib/nghttp2_rcbuf.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:
 

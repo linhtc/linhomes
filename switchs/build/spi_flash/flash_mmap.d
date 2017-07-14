@@ -16,6 +16,8 @@ flash_mmap.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/cdefs.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/string.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/string.h \
@@ -27,7 +29,6 @@ flash_mmap.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdint.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/_intsup.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/xtensa_config.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/xtensa/hal.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/xtensa/config/core.h \
@@ -107,6 +108,10 @@ flash_mmap.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h:
 
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
+
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/string.h:
@@ -128,8 +133,6 @@ flash_mmap.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/_intsup.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/xtensa_config.h:
 

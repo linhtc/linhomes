@@ -11,7 +11,6 @@ src/nvs_pagemanager.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/src/compressed_enum_table.hpp \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/src/nvs_page.hpp \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/spi_flash/include/esp_spi_flash.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/src/intrusive_list.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/src/nvs_item_hash_list.hpp
 
@@ -36,8 +35,6 @@ src/nvs_pagemanager.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/src/nvs_page.hpp:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/spi_flash/include/esp_spi_flash.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/src/intrusive_list.h:
 

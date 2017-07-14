@@ -15,6 +15,11 @@ library/xmlparse.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/lock.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/cdefs.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/string.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/limits.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/time.h \
@@ -25,9 +30,6 @@ library/xmlparse.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/expat/include/expat/expat_config.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/expat/include/expat/ascii.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/expat/include/expat/expat.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/expat/include/expat/expat_external.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/expat/include/expat/internal.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/expat/include/expat/xmltok.h \
@@ -64,6 +66,16 @@ library/xmlparse.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/string.h:
 
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h:
+
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/limits.h:
@@ -83,12 +95,6 @@ library/xmlparse.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/expat/include/expat/ascii.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/expat/include/expat/expat.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/expat/include/expat/expat_external.h:
 

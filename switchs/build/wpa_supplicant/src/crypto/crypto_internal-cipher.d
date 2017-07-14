@@ -30,6 +30,8 @@ src/crypto/crypto_internal-cipher.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/rom/ets_sys.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/soc/esp32/include/soc/soc.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/mem.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/opt.h \
@@ -41,7 +43,6 @@ src/crypto/crypto_internal-cipher.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/_default_fcntl.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/stat.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_task.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/debug.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/arch.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/port/arch/cc.h \
@@ -141,6 +142,10 @@ src/crypto/crypto_internal-cipher.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_assert.h:
 
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
+
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/mem.h:
@@ -162,8 +167,6 @@ src/crypto/crypto_internal-cipher.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/stat.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_task.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/debug.h:
 

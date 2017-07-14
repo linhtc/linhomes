@@ -24,15 +24,16 @@ WL_Flash.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/rom/ets_sys.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/soc/esp32/include/soc/soc.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/wear_levelling/private_include/WL_Flash.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_err.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/wear_levelling/private_include/Flash_Access.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/wear_levelling/private_include/WL_Config.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/wear_levelling/private_include/WL_State.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/wear_levelling/./crc32.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/string.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/string.h
@@ -85,6 +86,14 @@ WL_Flash.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_assert.h:
 
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h:
+
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/wear_levelling/private_include/WL_Flash.h:
@@ -96,12 +105,6 @@ WL_Flash.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/wear_levelling/private_include/WL_Config.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/wear_levelling/private_include/WL_State.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/wear_levelling/./crc32.h:
 

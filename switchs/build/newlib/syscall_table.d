@@ -37,11 +37,12 @@ syscall_table.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/reent.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/vfs/include/esp_vfs.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_err.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/dirent.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/vfs/include/sys/dirent.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/esp_newlib.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/esp_newlib.h
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/string.h:
 
@@ -117,6 +118,10 @@ syscall_table.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_err.h:
 
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
+
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/dirent.h:
@@ -124,5 +129,3 @@ syscall_table.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/vfs/include/sys/dirent.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/esp_newlib.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:

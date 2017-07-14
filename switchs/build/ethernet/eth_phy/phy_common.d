@@ -22,6 +22,11 @@ eth_phy/phy_common.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/types.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/types.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/stdio.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/ethernet/include/eth_phy/phy_reg.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/driver/include/driver/gpio.h \
@@ -37,7 +42,6 @@ eth_phy/phy_common.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_attr.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_intr_alloc.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/log/include/esp_log.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/rom/ets_sys.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/soc/esp32/include/soc/soc.h
 
@@ -85,6 +89,16 @@ eth_phy/phy_common.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/stdio.h:
 
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h:
+
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/ethernet/include/eth_phy/phy_reg.h:
@@ -114,8 +128,6 @@ eth_phy/phy_common.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_intr_alloc.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/log/include/esp_log.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/rom/ets_sys.h:
 

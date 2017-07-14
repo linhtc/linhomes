@@ -43,6 +43,7 @@ syscalls.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/rom/ets_sys.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/soc/esp32/include/soc/soc.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/projdefs.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/portable.h \
@@ -54,7 +55,9 @@ syscalls.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/xtensa/xtruntime-core-state.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_crosscore_int.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/portbenchmark.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/mpu_wrappers.h
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/mpu_wrappers.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/heap/include/esp_heap_caps.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/heap/include/multi_heap.h
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/string.h:
 
@@ -142,6 +145,8 @@ syscalls.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_assert.h:
 
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h:
+
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/projdefs.h:
@@ -165,3 +170,7 @@ syscalls.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/portbenchmark.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/mpu_wrappers.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/heap/include/esp_heap_caps.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/heap/include/multi_heap.h:

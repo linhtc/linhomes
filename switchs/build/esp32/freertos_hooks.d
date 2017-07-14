@@ -25,6 +25,8 @@ freertos_hooks.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/types.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/types.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/stdio.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdint.h:
@@ -76,5 +78,9 @@ freertos_hooks.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/types.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/stdio.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:

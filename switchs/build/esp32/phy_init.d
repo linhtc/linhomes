@@ -23,6 +23,8 @@ phy_init.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/_intsup.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/soc/esp32/include/soc/soc.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/rom/rtc.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/rom/ets_sys.h \
@@ -63,7 +65,6 @@ phy_init.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/xtensa/xtensa-versions.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/xtensa/config/core-matmap.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/log/include/esp_log.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/include/nvs.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/include/nvs_flash.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/./phy.h \
@@ -115,6 +116,10 @@ phy_init.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/soc/esp32/include/soc/soc.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_assert.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:
 
@@ -195,8 +200,6 @@ phy_init.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/xtensa/config/core-matmap.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/log/include/esp_log.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/include/nvs.h:
 

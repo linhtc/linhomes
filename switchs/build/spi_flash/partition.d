@@ -16,6 +16,8 @@ partition.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/cdefs.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/string.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/string.h \
@@ -29,7 +31,6 @@ partition.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/_intsup.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/spi_flash/include/esp_spi_flash.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_err.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/spi_flash/include/esp_partition.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/spi_flash/include/esp_spi_flash.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/bootloader_support/include/esp_flash_encrypt.h \
@@ -73,6 +74,10 @@ partition.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h:
 
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
+
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/string.h:
@@ -98,8 +103,6 @@ partition.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/spi_flash/include/esp_spi_flash.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_err.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/spi_flash/include/esp_partition.h:
 

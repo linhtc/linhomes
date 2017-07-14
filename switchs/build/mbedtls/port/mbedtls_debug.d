@@ -22,17 +22,18 @@ port/mbedtls_debug.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/rom/ets_sys.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/soc/esp32/include/soc/soc.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/cdefs.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/mbedtls/include/mbedtls/platform.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/mbedtls/port/include/mbedtls/esp_config.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/mbedtls/include/mbedtls/check_config.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/limits.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdio.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/cdefs.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/stdio.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/time.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/time.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/mbedtls/include/mbedtls/debug.h \
@@ -99,6 +100,16 @@ port/mbedtls_debug.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_assert.h:
 
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/cdefs.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h:
+
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/mbedtls/include/mbedtls/platform.h:
@@ -111,15 +122,7 @@ port/mbedtls_debug.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdio.h:
 
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/cdefs.h:
-
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/stdio.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/time.h:
 

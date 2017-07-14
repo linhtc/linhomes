@@ -26,14 +26,16 @@ tcpip_adapter_lwip.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_wifi_types.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/rom/queue.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_err.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_interface.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/ip_addr.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/opt.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/port/lwipopts.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/time.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/time.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/time.h \
@@ -41,7 +43,6 @@ tcpip_adapter_lwip.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/_default_fcntl.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/stat.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_task.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/debug.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/arch.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/port/arch/cc.h \
@@ -165,6 +166,16 @@ tcpip_adapter_lwip.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_err.h:
 
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h:
+
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_interface.h:
@@ -174,12 +185,6 @@ tcpip_adapter_lwip.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/opt.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/port/lwipopts.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/time.h:
 
@@ -194,8 +199,6 @@ tcpip_adapter_lwip.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/stat.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_task.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/debug.h:
 

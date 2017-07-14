@@ -18,6 +18,8 @@ vfs.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/string.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/string.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/errno.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/vfs/include/esp_vfs.h \
@@ -34,7 +36,6 @@ vfs.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/dirent.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/vfs/include/sys/dirent.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/log/include/esp_log.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/rom/ets_sys.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/soc/esp32/include/soc/soc.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_assert.h
@@ -75,6 +76,10 @@ vfs.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/string.h:
 
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
+
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/errno.h:
@@ -106,8 +111,6 @@ vfs.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/vfs/include/sys/dirent.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/log/include/esp_log.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/rom/ets_sys.h:
 

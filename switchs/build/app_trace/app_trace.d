@@ -19,6 +19,11 @@ app_trace.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdint.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/_intsup.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/soc/esp32/include/soc/dport_reg.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/soc/esp32/include/soc/soc.h \
@@ -27,7 +32,6 @@ app_trace.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_dport_access.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/xtensa-debug-module/include/eri.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/xtensa-debug-module/include/trax.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_err.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdio.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/types.h \
@@ -47,9 +51,6 @@ app_trace.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/xtensa_context.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/xtensa/corebits.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/xtensa/xtruntime-frames.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/rom/ets_sys.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/projdefs.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/portable.h \
@@ -111,6 +112,16 @@ app_trace.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_assert.h:
 
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h:
+
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/soc/esp32/include/soc/dport_reg.h:
@@ -126,8 +137,6 @@ app_trace.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/xtensa-debug-module/include/eri.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/xtensa-debug-module/include/trax.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_err.h:
 
@@ -166,12 +175,6 @@ app_trace.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/xtensa/corebits.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/xtensa/xtruntime-frames.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/rom/ets_sys.h:
 

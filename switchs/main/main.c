@@ -583,7 +583,7 @@ static void initialise_ap(void){
 	        .ap = {
 	            .ssid = "Leon ESP32",
 	            .ssid_len = 0,
-	            .max_connection=2,
+	            .max_connection = 2,
 	            .password = "11330232",
 	            .authmode = WIFI_AUTH_WPA_WPA2_PSK
 	        },

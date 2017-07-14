@@ -35,6 +35,7 @@ core/ipv4/ip_frag.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/_intsup.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/errno.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/errno.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdio.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/stdio.h \
@@ -162,6 +163,8 @@ core/ipv4/ip_frag.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/errno.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/errno.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:
 

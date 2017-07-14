@@ -22,14 +22,15 @@ port/esp_bignum.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/malloc.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/malloc.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/limits.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/mbedtls/port/include/mbedtls/bignum.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/mbedtls/include/mbedtls/bignum.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/mbedtls/port/include/mbedtls/esp_config.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/mbedtls/include/mbedtls/check_config.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdint.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/_intsup.h \
@@ -132,7 +133,9 @@ port/esp_bignum.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/limits.h:
 
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h:
 
@@ -140,13 +143,13 @@ port/esp_bignum.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h:
 
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:
+
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/mbedtls/port/include/mbedtls/bignum.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/mbedtls/include/mbedtls/bignum.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/mbedtls/port/include/mbedtls/esp_config.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/mbedtls/include/mbedtls/check_config.h:
 

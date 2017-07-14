@@ -23,6 +23,11 @@ src/diskio_sdmmc.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_err.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdint.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/_intsup.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/driver/include/driver/sdmmc_types.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/driver/include/driver/sdmmc_host.h \
@@ -40,7 +45,6 @@ src/diskio_sdmmc.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_attr.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_intr_alloc.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/fatfs/src/ffconf.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/xtensa_config.h \
@@ -53,9 +57,6 @@ src/diskio_sdmmc.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/xtensa_context.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/xtensa/corebits.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/xtensa/xtruntime-frames.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/rom/ets_sys.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/soc/esp32/include/soc/soc.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/projdefs.h \
@@ -120,6 +121,16 @@ src/diskio_sdmmc.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/_intsup.h:
 
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h:
+
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/driver/include/driver/sdmmc_types.h:
@@ -154,8 +165,6 @@ src/diskio_sdmmc.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/fatfs/src/ffconf.h:
 
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switchs/build/include/sdkconfig.h:
-
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/FreeRTOS.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h:
@@ -179,12 +188,6 @@ src/diskio_sdmmc.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/xtensa/corebits.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/xtensa/xtruntime-frames.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/rom/ets_sys.h:
 

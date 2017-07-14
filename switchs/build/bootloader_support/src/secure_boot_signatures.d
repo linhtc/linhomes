@@ -22,6 +22,10 @@ src/secure_boot_signatures.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/types.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/types.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/stdio.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/spi_flash/include/esp_spi_flash.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/log/include/esp_log.h \
@@ -80,6 +84,14 @@ src/secure_boot_signatures.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/types.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/stdio.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/platform_include/assert.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/stdlib.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/machine/stdlib.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/alloca.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/assert.h:
 
