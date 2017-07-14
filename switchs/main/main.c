@@ -493,6 +493,11 @@ static void https_get_task(void *pvParameters){
 			}
 		} else{
 			gettask_err = 0;
+			if(ws_check_client() > 0){
+				ESP_LOGW(TAG, "ws connected -> vTaskDelete");
+				rebuild_g = true;
+				vTaskDelete(NULL);
+			}
 		}
     }
 }
@@ -624,6 +629,10 @@ static void repair_ip(void *pvParameters){
 	    	ESP_LOGI(TAG, "ip lookup at %s -> ws: %d", ip_address,  handshake_ws);
 		} else{
 	    	ESP_LOGI(TAG, "ip lookup at %s", ip_address);
+	    	if(rebuild_g){ /* recreate get task */
+	    		rebuild_g = false;
+	    	    xTaskCreatePinnedToCore(&https_get_task, "https_get_task", 8192, NULL, 5, &TaskHandle_get, 1);
+	    	}
 		}
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
