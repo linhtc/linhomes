@@ -513,6 +513,16 @@ static esp_err_t event_handler(void *ctx, system_event_t *event){
         	offline_time++;
 			ESP_LOGW(TAG, "offline time: %d", offline_time);
 			if(offline_time > 120){
+				// if loop over 3 times of interaction
+				int times = handle_nvs("oflt", 0, 0);
+				if(times > 3){
+					handle_nvs("w_mode", 1, 1);
+					handle_nvs("oflt", 0, 1);
+					ESP_LOGW(TAG, "esp return ap mode: %d", times);
+				} else{
+					times++;
+					handle_nvs("oflt", times, 1);
+				}
 				ESP_LOGW(TAG, "system will be restart with threshold: %d", offline_time);
 				esp_restart();
 			}
