@@ -335,9 +335,6 @@ static void https_get_task(void *pvParameters){
     }
 
     while(1) {
-    	while(ws_check_client() > 0){
-
-		}
         printf("WS num: %d\n", ws_check_client());
         xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, false, true, portMAX_DELAY);
         ESP_LOGI(TAG, "Connected to AP");
@@ -493,12 +490,16 @@ static void https_get_task(void *pvParameters){
 			}
 		} else{
 			gettask_err = 0;
-			if(ws_check_client() > 0){
-				ESP_LOGW(TAG, "ws connected -> vTaskDelete");
-				rebuild_g = true;
-				vTaskDelete(NULL);
-			}
 		}
+		for(int countdown = 9; countdown >= 0; countdown--) {
+			ESP_LOGI(TAG, "%d...", countdown);
+			vTaskDelay(1000 / portTICK_PERIOD_MS);
+		}
+//		if(ws_check_client() > 0){
+//			ESP_LOGW(TAG, "ws connected -> vTaskDelete");
+//			rebuild_g = true;
+//			vTaskDelete(NULL);
+//		}
     }
 }
 
@@ -512,12 +513,12 @@ static esp_err_t event_handler(void *ctx, system_event_t *event){
         case SYSTEM_EVENT_STA_DISCONNECTED:{
         	offline_time++;
 			ESP_LOGW(TAG, "offline time: %d", offline_time);
-			if(offline_time > 120){
+			if(offline_time > 59){
 				// if loop over 3 times of interaction
 				int times = handle_nvs("oflt", 0, 0);
-				if(times > 3){
+				if(times > 2){
 					handle_nvs("w_mode", 1, 1);
-					handle_nvs("oflt", 0, 1);
+					handle_nvs("oflt", 1, 1);
 					ESP_LOGW(TAG, "esp return ap mode: %d", times);
 				} else{
 					times++;
@@ -808,17 +809,17 @@ void app_main(){
 	// neu ket noi duoc wifi truoc do thi bat mode sta
 	if(handle_nvs("w_mode", 0, 0) < 1 && strlen((const char *)uc_ssid) > 0){
 	    initialise_wifi();
-	    xTaskCreatePinnedToCore(&https_get_task, "https_get_task", 8192, NULL, 5, &TaskHandle_get, 1);
-	    xTaskCreate(&repair_ip, "repair_ip", 8192, NULL, 6, &TaskHandle_repair); //NULL
+	    xTaskCreatePinnedToCore(&https_get_task, "https_get_task", 8192, NULL, 2, &TaskHandle_get, 1);
+	    xTaskCreate(&repair_ip, "repair_ip", 8192, NULL, 3, &TaskHandle_repair); //NULL
 	} else{ // neu truoc do ket noi ap that bai 10 lan thi chuyen mode
 		initialise_ap();
 	}
 //    create WebSocker receive task
 //    xTaskCreate(&task_process_WebSocket, "ws_process_rx", 2048, NULL, 5, NULL);
-    xTaskCreatePinnedToCore(&task_process_WebSocket, "ws_process_rx", 2048, NULL, 4, NULL, 0);
+    xTaskCreatePinnedToCore(&task_process_WebSocket, "ws_process_rx", 2048, NULL, 5, NULL, 0);
 
 //    Create Websocket Server Task
 //    xTaskCreate(&ws_server, "ws_server", 2048, NULL, 5, NULL);
-    xTaskCreatePinnedToCore(&ws_server, "ws_server", 2048, NULL, 4, NULL, 0);
+    xTaskCreatePinnedToCore(&ws_server, "ws_server", 2048, NULL, 5, NULL, 0);
 
 }
