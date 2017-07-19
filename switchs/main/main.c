@@ -334,7 +334,7 @@ static void https_get_task(void *pvParameters){
         goto exit;
     }
 
-    while(1) {
+    while(!rebuild_g) {
         printf("WS num: %d\n", ws_check_client());
         xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, false, true, portMAX_DELAY);
         ESP_LOGI(TAG, "Connected to AP");
@@ -491,16 +491,12 @@ static void https_get_task(void *pvParameters){
 		} else{
 			gettask_err = 0;
 		}
-		for(int countdown = 9; countdown >= 0; countdown--) {
-			ESP_LOGI(TAG, "%d...", countdown);
-			vTaskDelay(1000 / portTICK_PERIOD_MS);
+		if(ws_check_client() > 0){
+			ESP_LOGW(TAG, "ws connected -> vTaskDelete");
+			rebuild_g = true;
 		}
-//		if(ws_check_client() > 0){
-//			ESP_LOGW(TAG, "ws connected -> vTaskDelete");
-//			rebuild_g = true;
-//			vTaskDelete(NULL);
-//		}
     }
+    vTaskDelete(NULL);
 }
 
 static esp_err_t event_handler(void *ctx, system_event_t *event){
@@ -635,14 +631,14 @@ static void repair_ip(void *pvParameters){
 			handle_snvs("wi", (char *)uc_ip, 1);
 			pushing = true; // rewrite data to FireBase
 		}
-		if(ws_check_client() == 1){ /* ws connected -> remove get task */
+		if(ws_check_client() > 0){ /* ws connected -> remove get task */
 			handshake_ws++;
 	    	ESP_LOGI(TAG, "ip lookup at %s -> ws: %d", ip_address,  handshake_ws);
 		} else{
 	    	ESP_LOGI(TAG, "ip lookup at %s", ip_address);
 	    	if(rebuild_g){ /* recreate get task */
 	    		rebuild_g = false;
-	    	    xTaskCreatePinnedToCore(&https_get_task, "https_get_task", 8192, NULL, 5, &TaskHandle_get, 1);
+	    	    xTaskCreatePinnedToCore(&https_get_task, "https_get_task", 8192, NULL, 3, &TaskHandle_get, 1);
 	    	}
 		}
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -809,8 +805,9 @@ void app_main(){
 	// neu ket noi duoc wifi truoc do thi bat mode sta
 	if(handle_nvs("w_mode", 0, 0) < 1 && strlen((const char *)uc_ssid) > 0){
 	    initialise_wifi();
-	    xTaskCreatePinnedToCore(&https_get_task, "https_get_task", 8192, NULL, 2, &TaskHandle_get, 1);
-	    xTaskCreate(&repair_ip, "repair_ip", 8192, NULL, 3, &TaskHandle_repair); //NULL
+	    xTaskCreatePinnedToCore(&https_get_task, "https_get_task", 8192, NULL, 3, &TaskHandle_get, 1);
+//	    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 2, &TaskHandle_get); //NULL
+	    xTaskCreate(&repair_ip, "repair_ip", 8192, NULL, 4, &TaskHandle_repair); //NULL
 	} else{ // neu truoc do ket noi ap that bai 10 lan thi chuyen mode
 		initialise_ap();
 	}
@@ -820,6 +817,6 @@ void app_main(){
 
 //    Create Websocket Server Task
 //    xTaskCreate(&ws_server, "ws_server", 2048, NULL, 5, NULL);
-    xTaskCreatePinnedToCore(&ws_server, "ws_server", 2048, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(&ws_server, "ws_server", 2048, NULL, 4, NULL, 0);
 
 }
