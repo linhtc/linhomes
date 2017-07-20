@@ -106,7 +106,11 @@ WebSocket_Task.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/xtensa_api.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/wpa_supplicant/include/wpa2/utils/base64.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/string.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/string.h
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/string.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/sockets.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/inet.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/netdb.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/dns.h
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switches/main/./WebSocket_Task.h:
 
@@ -321,4 +325,12 @@ WebSocket_Task.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/string.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/string.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/sockets.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/inet.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/netdb.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/dns.h:
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switches/main/./WebSocket_Task.c:

@@ -32,11 +32,11 @@
 #include "esp_system.h"
 #include "nvs_flash.h"
 
-#include "lwip/err.h"
-#include "lwip/sockets.h"
-#include "lwip/sys.h"
-#include "lwip/netdb.h"
-#include "lwip/dns.h"
+//#include "lwip/err.h"
+//#include "lwip/sockets.h"
+//#include "lwip/sys.h"
+//#include "lwip/netdb.h"
+//#include "lwip/dns.h"
 
 #include "mbedtls/platform.h"
 #include "mbedtls/net.h"
@@ -96,7 +96,6 @@ unsigned int offline_time = 0;
 unsigned int handshake_ws = 0;
 unsigned int gettask_err = 0;
 int pin_state = -1;
-bool rebuild_g = false;
 bool pushing = false;
 bool ws_ack = false;
 
@@ -277,6 +276,12 @@ static void https_get_task(void *pvParameters){
     char buf[125];
     int ret, flags, len;
 
+    //frame buffer
+	WebSocket_frame_t __RX_frame;
+
+	//create WebSocket RX Queue
+	WebSocket_rx_queue = xQueueCreate(10,sizeof(WebSocket_frame_t));
+
     mbedtls_entropy_context entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
     mbedtls_ssl_context ssl;
@@ -334,148 +339,231 @@ static void https_get_task(void *pvParameters){
         goto exit;
     }
 
-    while(!rebuild_g) {
-        printf("WS num: %d\n", ws_check_client());
+    while(1) {
         xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, false, true, portMAX_DELAY);
-        ESP_LOGI(TAG, "Connected to AP");
 
-        char *ip_address = "";
-		tcpip_adapter_ip_info_t ip;
-		memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
-		if (tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0) {
-			ip_address = inet_ntoa(ip.ip);
-			snprintf(uc_ip, sizeof(uc_ip), "%s", ip_address);
-		}
+        //receive next WebSocket frame from queue
+		if(ws_check_client() > 0){
+			bzero(buf, sizeof(buf));
+			ret = 0;
+			if(xQueueReceive(WebSocket_rx_queue,&__RX_frame, 3*portTICK_PERIOD_MS)==pdTRUE){
+				//write frame inforamtion to UART
+				printf("New Websocket frame. Length %d, payload %.*s \r\n", __RX_frame.payload_length, __RX_frame.payload_length, __RX_frame.payload);
 
-        mbedtls_net_init(&server_fd);
+				cJSON *socketQ = cJSON_Parse(__RX_frame.payload);
+				if(socketQ != NULL){
+					cJSON *response = cJSON_CreateObject();
+					cJSON *cmd = cJSON_GetObjectItem(socketQ, "cmd");
+					if(cmd != NULL){
+						ESP_LOGI(TAG, "cmd --> %d", cmd->valueint);
+						handshake_ws = 0;
+						ws_ack = false;
+						switch (cmd->valueint){ // 0 => ack, 1 -> info, 2 set ssid, 3 control pin
+							case 0:{
+								cJSON_AddNumberToObject(response, "status", 1);
+								cJSON_AddNumberToObject(response, "p18", pin_state);
+								break;
+							}
+							case 1:{ // get info
+								ESP_LOGI(TAG, "cmd 1 --> %d", cmd->valueint);
+								int val18 = handle_nvs("key18", 0, 0);
+								cJSON_AddNumberToObject(response, "p18", val18);
+								uint8_t addr[6];
+								esp_efuse_mac_get_default(addr);
+								cJSON_AddStringToObject(response, "ws", (const char *)uc_ssid);
+								cJSON_AddStringToObject(response, "wp", (const char *)uc_pw);
+								cJSON_AddStringToObject(response, "wi", uc_ip);
+								cJSON_AddNumberToObject(response, "status", 1);
+								break;
+							}
+							case 2:{ // set ssid
+								ESP_LOGI(TAG, "cmd 2 --> %d", cmd->valueint);
+								cJSON *ssid = cJSON_GetObjectItem(socketQ, "ssid");
+								cJSON *pw = cJSON_GetObjectItem(socketQ, "pw");
+								if(ssid != NULL && pw != NULL){
+									handle_snvs("ssid", ssid->valuestring, 1);
+									handle_snvs("pw", pw->valuestring, 1);
+									cJSON_AddNumberToObject(response, "status", 1);
+									if(handle_nvs("w_mode", 0, 1) == ESP_OK){
+										char *res = cJSON_Print(response);
+										WS_write_data(res, strlen(res));
+										ESP_LOGI(TAG, "system will restart after %d seconds", 3);
+										vTaskDelay(1000 / portTICK_PERIOD_MS);
+										esp_restart();
+										vTaskDelete(NULL);
+									} else{
+										ESP_LOGI(TAG, "write w_mode error");
+									}
+								}
+								break;
+							}
+							case 3:{ // control pin
+								ESP_LOGI(TAG, "cmd 3 --> %d", cmd->valueint);
+								cJSON *gpio_num = cJSON_GetObjectItem(socketQ, "ps");
+								cJSON *gpio_req = cJSON_GetObjectItem(socketQ, "req");
+								if(gpio_num != NULL && gpio_req != NULL){
+									switch (gpio_num->valueint){
+									case 18:
+										xTaskCreate(&control_18, "control_18", 8192, (void*)gpio_req->valueint, 1, &TaskHandle_ctrl_18);
+										cJSON_AddNumberToObject(response, "status", 1);
+										break;
+									default:
+										break;
+									}
+								}
+								break;
+							}
+							default:{
+								cJSON_AddNumberToObject(response, "status", 0);
+								break;
+							}
+						}
+					}
+					char *res = cJSON_Print(response);
+					esp_err_t err = WS_write_data(res, strlen(res));
+					ESP_LOGI(TAG, "send %s -> %d", res, err);
+				} else{
+					//loop back frame
+					WS_write_data(__RX_frame.payload, __RX_frame.payload_length);
+				}
 
-        ESP_LOGI(TAG, "Connecting to %s:%s...", WEB_SERVER, WEB_PORT);
+				//free memory
+				if (__RX_frame.payload != NULL){
+					free(__RX_frame.payload);
+				}
+			}
+		} else{ // ws -> not connected
+	        printf("WS num: %d\n", ws_check_client());
+	        ESP_LOGI(TAG, "Connected to AP");
+			mbedtls_net_init(&server_fd);
 
-        if ((ret = mbedtls_net_connect(&server_fd, WEB_SERVER, WEB_PORT, MBEDTLS_NET_PROTO_TCP)) != 0){
-            ESP_LOGE(TAG, "mbedtls_net_connect returned -%x", -ret);
-            goto exit;
-        }
+			ESP_LOGI(TAG, "Connecting to %s:%s...", WEB_SERVER, WEB_PORT);
 
-        ESP_LOGI(TAG, "Connected to FireBase");
-
-//        mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
-        mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
-
-        ESP_LOGI(TAG, "Performing the SSL/TLS handshake...");
-        while ((ret = mbedtls_ssl_handshake(&ssl)) != 0){
-            if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
-                ESP_LOGE(TAG, "mbedtls_ssl_handshake returned -0x%x", -ret);
-                goto exit;
-            }
-        }
-
-        ESP_LOGI(TAG, "Verifying peer X.509 certificate...");
-
-        if ((flags = mbedtls_ssl_get_verify_result(&ssl)) != 0){
-            /* In real life, we probably want to close connection if ret != 0 */
-            ESP_LOGW(TAG, "Failed to verify peer certificate!");
-            bzero(buf, sizeof(buf));
-            mbedtls_x509_crt_verify_info(buf, sizeof(buf), "  ! ", flags);
-            ESP_LOGW(TAG, "verification info: %s", buf);
-        } else {
-            ESP_LOGI(TAG, "Certificate verified.");
-        }
-
-        ESP_LOGI(TAG, "Writing HTTP request...");
-
-		// if pushing then enable push mode
-		if(pushing){
-			pushing = false;
-			ESP_LOGW(TAG, "pushing to FireBase -> pushing");
-			cJSON *root = cJSON_CreateObject();
-			cJSON_AddStringToObject(root, "ws", (const char *)uc_ssid);
-			cJSON_AddStringToObject(root, "wp", (const char *)uc_pw);
-			cJSON_AddStringToObject(root, "wi", uc_ip);
-
-			cJSON *gpio18 = cJSON_CreateObject();
-			cJSON_AddNumberToObject(gpio18, "req", pin_state);
-
-			cJSON *pins = cJSON_CreateObject();
-			cJSON_AddItemToObject(pins, "18", gpio18);
-			cJSON_AddItemToObject(root, "ps", pins);
-
-	        char url[68];
-			strcpy(url, WEB_URL);
-			strcat( url, uc_mac);
-			strcat( url, ".json"); // access_token will be required in the future
-			printf("%s\n", url);
-
-			char *post = cJSON_Print(root);
-			char len_post[10];
-			snprintf(len_post, sizeof(len_post), "%d", strlen(post));
-
-			char request[384] = "PUT ";
-			strcat(request, url);
-			strcat(request, " HTTP/1.0\r\n");
-			strcat(request, "User-Agent: esp-idf/1.0 esp32\r\n");
-			strcat(request, "Connection: close\r\n");
-			strcat(request, "Host: linhomes-afa8a.firebaseio.com\r\n");
-			strcat(request, "Content-Type: application/json\r\n");
-			strcat(request, "Content-Length: ");
-			strcat(request, len_post);
-			strcat(request, "\r\n");
-			strcat(request, "\r\n");
-			strcat(request, post);
-			REQUEST = request;
-		} else{ // only get device info
-	        char url[68];
-			strcpy(url, WEB_URL);
-			strcat( url, uc_mac);
-			strcat( url, "/ps/18.json"); // access_token will be required in the future
-			char request[256] = "GET ";
-			strcat(request, url);
-			strcat(request, " HTTP/1.1\r\n");
-			strcat(request, "User-Agent: esp-idf/1.0 esp32\r\n");
-			strcat(request, "Connection: close\r\n");
-			strcat(request, "Host: linhomes-afa8a.firebaseio.com\r\n");
-			strcat(request, "User-Agent: esp-idf/1.0 esp32\r\n");
-			strcat(request, "Accept: application/json\r\n");
-			strcat(request, "\r\n");
-			REQUEST = request;
-		}
-		printf("req -> %s\nreq size -> %d\n", REQUEST, strlen(REQUEST));
-		while((ret = mbedtls_ssl_write(&ssl, (const unsigned char *)REQUEST, strlen(REQUEST))) <= 0){
-			if(ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
-				ESP_LOGE(TAG, "mbedtls_ssl_write returned -0x%x", -ret);
+			if ((ret = mbedtls_net_connect(&server_fd, WEB_SERVER, WEB_PORT, MBEDTLS_NET_PROTO_TCP)) != 0){
+				ESP_LOGE(TAG, "mbedtls_net_connect returned -%x", -ret);
 				goto exit;
 			}
+
+			ESP_LOGI(TAG, "Connected to FireBase");
+
+	//        mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
+			mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
+
+			ESP_LOGI(TAG, "Performing the SSL/TLS handshake...");
+			while ((ret = mbedtls_ssl_handshake(&ssl)) != 0){
+				if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
+					ESP_LOGE(TAG, "mbedtls_ssl_handshake returned -0x%x", -ret);
+					goto exit;
+				}
+			}
+
+			ESP_LOGI(TAG, "Verifying peer X.509 certificate...");
+
+			if ((flags = mbedtls_ssl_get_verify_result(&ssl)) != 0){
+				/* In real life, we probably want to close connection if ret != 0 */
+				ESP_LOGW(TAG, "Failed to verify peer certificate!");
+				bzero(buf, sizeof(buf));
+				mbedtls_x509_crt_verify_info(buf, sizeof(buf), "  ! ", flags);
+				ESP_LOGW(TAG, "verification info: %s", buf);
+			} else {
+				ESP_LOGI(TAG, "Certificate verified.");
+			}
+
+			ESP_LOGI(TAG, "Writing HTTP request...");
+
+			// if pushing then enable push mode
+			if(pushing){
+				pushing = false;
+				ESP_LOGW(TAG, "pushing to FireBase -> pushing");
+				cJSON *root = cJSON_CreateObject();
+				cJSON_AddStringToObject(root, "ws", (const char *)uc_ssid);
+				cJSON_AddStringToObject(root, "wp", (const char *)uc_pw);
+				cJSON_AddStringToObject(root, "wi", uc_ip);
+
+				cJSON *gpio18 = cJSON_CreateObject();
+				cJSON_AddNumberToObject(gpio18, "req", pin_state);
+
+				cJSON *pins = cJSON_CreateObject();
+				cJSON_AddItemToObject(pins, "18", gpio18);
+				cJSON_AddItemToObject(root, "ps", pins);
+
+				char url[68];
+				strcpy(url, WEB_URL);
+				strcat( url, uc_mac);
+				strcat( url, ".json"); // access_token will be required in the future
+				printf("%s\n", url);
+
+				char *post = cJSON_Print(root);
+				char len_post[10];
+				snprintf(len_post, sizeof(len_post), "%d", strlen(post));
+
+				char request[384] = "PUT ";
+				strcat(request, url);
+				strcat(request, " HTTP/1.0\r\n");
+				strcat(request, "User-Agent: esp-idf/1.0 esp32\r\n");
+				strcat(request, "Connection: close\r\n");
+				strcat(request, "Host: linhomes-afa8a.firebaseio.com\r\n");
+				strcat(request, "Content-Type: application/json\r\n");
+				strcat(request, "Content-Length: ");
+				strcat(request, len_post);
+				strcat(request, "\r\n");
+				strcat(request, "\r\n");
+				strcat(request, post);
+				REQUEST = request;
+			} else{ // only get device info
+				char url[68];
+				strcpy(url, WEB_URL);
+				strcat( url, uc_mac);
+				strcat( url, "/ps/18.json"); // access_token will be required in the future
+				char request[256] = "GET ";
+				strcat(request, url);
+				strcat(request, " HTTP/1.1\r\n");
+				strcat(request, "User-Agent: esp-idf/1.0 esp32\r\n");
+				strcat(request, "Connection: close\r\n");
+				strcat(request, "Host: linhomes-afa8a.firebaseio.com\r\n");
+				strcat(request, "User-Agent: esp-idf/1.0 esp32\r\n");
+				strcat(request, "Accept: application/json\r\n");
+				strcat(request, "\r\n");
+				REQUEST = request;
+			}
+			printf("req -> %s\nreq size -> %d\n", REQUEST, strlen(REQUEST));
+			while((ret = mbedtls_ssl_write(&ssl, (const unsigned char *)REQUEST, strlen(REQUEST))) <= 0){
+				if(ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
+					ESP_LOGE(TAG, "mbedtls_ssl_write returned -0x%x", -ret);
+					goto exit;
+				}
+			}
+
+			len = ret;
+			ESP_LOGI(TAG, "%d bytes written", len);
+			ESP_LOGI(TAG, "Reading HTTP response...");
+			char final_buf[256] = "";
+			do{
+				len = sizeof(buf) - 1;
+				bzero(buf, sizeof(buf));
+				ret = mbedtls_ssl_read(&ssl, (unsigned char *)buf, len);
+
+				if(ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE){
+					continue;
+				}
+				if(ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) {
+					ret = 0;
+					break;
+				}
+				if(ret < 0){
+					ESP_LOGE(TAG, "mbedtls_ssl_read returned -0x%x", -ret);
+					break;
+				}
+				if(ret == 0){
+					ESP_LOGI(TAG, "connection closed");
+					break;
+				}
+				strcat(final_buf, buf);
+			} while(1);
+			info_listener(final_buf);
+
+			mbedtls_ssl_close_notify(&ssl);
 		}
-
-		len = ret;
-		ESP_LOGI(TAG, "%d bytes written", len);
-		ESP_LOGI(TAG, "Reading HTTP response...");
-		char final_buf[256] = "";
-		do{
-			len = sizeof(buf) - 1;
-			bzero(buf, sizeof(buf));
-			ret = mbedtls_ssl_read(&ssl, (unsigned char *)buf, len);
-
-			if(ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE){
-				continue;
-			}
-			if(ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) {
-				ret = 0;
-				break;
-			}
-			if(ret < 0){
-				ESP_LOGE(TAG, "mbedtls_ssl_read returned -0x%x", -ret);
-				break;
-			}
-			if(ret == 0){
-				ESP_LOGI(TAG, "connection closed");
-				break;
-			}
-			strcat(final_buf, buf);
-		} while(1);
-		info_listener(final_buf);
-
-        mbedtls_ssl_close_notify(&ssl);
-
 	exit:
 		mbedtls_ssl_session_reset(&ssl);
 		mbedtls_net_free(&server_fd);
@@ -490,10 +578,6 @@ static void https_get_task(void *pvParameters){
 			}
 		} else{
 			gettask_err = 0;
-		}
-		if(ws_check_client() > 0){
-			ESP_LOGW(TAG, "ws connected -> vTaskDelete");
-			rebuild_g = true;
 		}
     }
     vTaskDelete(NULL);
@@ -618,151 +702,54 @@ static void initialise_ap(void){
 static void repair_ip(void *pvParameters){
     vTaskDelay(3000 / portTICK_PERIOD_MS);
 	while(1){
-		char *ip_address = "";
+		char ip_address[20] = "";
 		tcpip_adapter_ip_info_t ip;
 		memset(&ip, 0, sizeof(tcpip_adapter_ip_info_t));
 		if (tcpip_adapter_get_ip_info(ESP_IF_WIFI_STA, &ip) == 0) {
-			ip_address = inet_ntoa(ip.ip);
+//			ESP_LOGI(TAG, "~~~~~~~~~~~");
+//			ESP_LOGI(TAG, "IP:"IPSTR, IP2STR(&ip.ip));
+//			ESP_LOGI(TAG, "MASK:"IPSTR, IP2STR(&ip.netmask));
+//			ESP_LOGI(TAG, "GW:"IPSTR, IP2STR(&ip.gw));
+//			ESP_LOGI(TAG, "~~~~~~~~~~~");
+			struct ip4_addr *ip4_addr;
+			ip4_addr = (struct ip4_addr *)&ip.ip;
+//			ESP_LOGI(TAG, IPSTR, IP2STR(ip4_addr));
+			snprintf(ip_address, sizeof(ip_address), "%d.%d.%d.%d", IP2STR(ip4_addr));
+//			ESP_LOGW(TAG, "%s", ip_address);
 		}
 		if(strcmp(ip_address, (char *)uc_ip) != 0 && strcmp(ip_address, "0.0.0.0") != 0){
 			ESP_LOGW(TAG, "should to update ip address");
 			ESP_LOGW(TAG, "ip old %s - new %s", uc_ip, ip_address);
 			snprintf(uc_ip, sizeof(uc_ip), "%s", ip_address);
-			handle_snvs("wi", (char *)uc_ip, 1);
-			pushing = true; // rewrite data to FireBase
+//			handle_snvs("wi", (char *)uc_ip, 1);
+//			pushing = true; // rewrite data to FireBase
 		}
 		if(ws_check_client() > 0){ /* ws connected -> remove get task */
 			handshake_ws++;
 	    	ESP_LOGI(TAG, "ip lookup at %s -> ws: %d", ip_address,  handshake_ws);
-		} else{
-	    	ESP_LOGI(TAG, "ip lookup at %s", ip_address);
-	    	if(rebuild_g){ /* recreate get task */
-	    		rebuild_g = false;
-	    	    xTaskCreatePinnedToCore(&https_get_task, "https_get_task", 8192, NULL, 3, &TaskHandle_get, 1);
-	    	}
-		}
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
-	}
-}
+	    	// disconnect ws
+			if(handshake_ws > 5 && ws_ack){
+				ESP_LOGW(TAG, "ws_rst_client");
+				handshake_ws = 0;
+				ws_ack = false;
+				ws_rst_client();
+			}
 
-void task_process_WebSocket( void *pvParameters ){
-    (void)pvParameters;
-
-    //frame buffer
-    WebSocket_frame_t __RX_frame;
-
-    //create WebSocket RX Queue
-    WebSocket_rx_queue = xQueueCreate(10,sizeof(WebSocket_frame_t));
-
-    while (1){
-
-        //receive next WebSocket frame from queue
-        if(xQueueReceive(WebSocket_rx_queue,&__RX_frame, 3*portTICK_PERIOD_MS)==pdTRUE){
-
-        	//write frame inforamtion to UART
-        	printf("New Websocket frame. Length %d, payload %.*s \r\n", __RX_frame.payload_length, __RX_frame.payload_length, __RX_frame.payload);
-
-        	cJSON *socketQ = cJSON_Parse(__RX_frame.payload);
-        	if(socketQ != NULL){
-        		cJSON *response = cJSON_CreateObject();
-        		cJSON *cmd = cJSON_GetObjectItem(socketQ, "cmd");
-        		if(cmd != NULL){
-					ESP_LOGI(TAG, "cmd --> %d", cmd->valueint);
-					handshake_ws = 0;
-					ws_ack = false;
-        			switch (cmd->valueint){ // 0 => ack, 1 -> info, 2 set ssid, 3 control pin
-        				case 0:{
-							cJSON_AddNumberToObject(response, "status", 1);
-		        			cJSON_AddNumberToObject(response, "p18", pin_state);
-        					break;
-        				}
-        				case 1:{ // get info
-							ESP_LOGI(TAG, "cmd 1 --> %d", cmd->valueint);
-							int val18 = handle_nvs("key18", 0, 0);
-		        			cJSON_AddNumberToObject(response, "p18", val18);
-		        			uint8_t addr[6];
-							esp_efuse_mac_get_default(addr);
-							cJSON_AddStringToObject(response, "ws", (const char *)uc_ssid);
-							cJSON_AddStringToObject(response, "wp", (const char *)uc_pw);
-							cJSON_AddStringToObject(response, "wi", uc_ip);
-							cJSON_AddNumberToObject(response, "status", 1);
-							break;
-						}
-						case 2:{ // set ssid
-							ESP_LOGI(TAG, "cmd 2 --> %d", cmd->valueint);
-							cJSON *ssid = cJSON_GetObjectItem(socketQ, "ssid");
-							cJSON *pw = cJSON_GetObjectItem(socketQ, "pw");
-							if(ssid != NULL && pw != NULL){
-								handle_snvs("ssid", ssid->valuestring, 1);
-								handle_snvs("pw", pw->valuestring, 1);
-								cJSON_AddNumberToObject(response, "status", 1);
-								if(handle_nvs("w_mode", 0, 1) == ESP_OK){
-									char *res = cJSON_Print(response);
-									WS_write_data(res, strlen(res));
-									ESP_LOGI(TAG, "system will restart after %d seconds", 3);
-								    vTaskDelay(1000 / portTICK_PERIOD_MS);
-									esp_restart();
-									vTaskDelete(NULL);
-								} else{
-									ESP_LOGI(TAG, "write w_mode error");
-								}
-							}
-							break;
-						}
-						case 3:{ // control pin
-							ESP_LOGI(TAG, "cmd 3 --> %d", cmd->valueint);
-							cJSON *gpio_num = cJSON_GetObjectItem(socketQ, "ps");
-							cJSON *gpio_req = cJSON_GetObjectItem(socketQ, "req");
-							if(gpio_num != NULL && gpio_req != NULL){
-								switch (gpio_num->valueint){
-								case 18:
-									xTaskCreate(&control_18, "control_18", 8192, (void*)gpio_req->valueint, 1, &TaskHandle_ctrl_18);
-									cJSON_AddNumberToObject(response, "status", 1);
-				        			break;
-								default:
-									break;
-								}
-							}
-							break;
-						}
-						default:{
-							cJSON_AddNumberToObject(response, "status", 0);
-							break;
-						}
-					}
-        		}
+			// need to send wake up cmd to slave
+			if(handshake_ws > 2 && !ws_ack){
+				ws_ack = true;
+				cJSON *response = cJSON_CreateObject();
+				cJSON_AddNumberToObject(response, "ack", 1);
 				char *res = cJSON_Print(response);
 				esp_err_t err = WS_write_data(res, strlen(res));
-				ESP_LOGI(TAG, "send %s -> %d", res, err);
-        	} else{
-            	//loop back frame
-            	WS_write_data(__RX_frame.payload, __RX_frame.payload_length);
-        	}
+				ESP_LOGW(TAG, "wake up slave -> %d", err);
+			}
+		} else{
+	    	ESP_LOGI(TAG, "ip lookup at %s", ip_address);
+		}
 
-        	//free memory
-			if (__RX_frame.payload != NULL)
-				free(__RX_frame.payload);
-
-        }
-
-        // disconnect ws
-    	if(handshake_ws > 5 && ws_ack){
-			ESP_LOGW(TAG, "ws_rst_client");
-			handshake_ws = 0;
-			ws_ack = false;
-    		ws_rst_client();
-    	}
-
-    	// need to send wake up cmd to slave
-    	if(handshake_ws > 2 && !ws_ack){
-			ws_ack = true;
-    		cJSON *response = cJSON_CreateObject();
-    		cJSON_AddNumberToObject(response, "ack", 1);
-			char *res = cJSON_Print(response);
-    		esp_err_t err = WS_write_data(res, strlen(res));
-			ESP_LOGW(TAG, "wake up slave -> %d", err);
-    	}
-    }
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+	}
 }
 
 void app_main(){
@@ -805,18 +792,18 @@ void app_main(){
 	// neu ket noi duoc wifi truoc do thi bat mode sta
 	if(handle_nvs("w_mode", 0, 0) < 1 && strlen((const char *)uc_ssid) > 0){
 	    initialise_wifi();
-	    xTaskCreatePinnedToCore(&https_get_task, "https_get_task", 8192, NULL, 3, &TaskHandle_get, 1);
+	    xTaskCreatePinnedToCore(&https_get_task, "https_get_task", 8192, NULL, 4, &TaskHandle_get, 1);
 //	    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 2, &TaskHandle_get); //NULL
-	    xTaskCreate(&repair_ip, "repair_ip", 8192, NULL, 4, &TaskHandle_repair); //NULL
+	    xTaskCreate(&repair_ip, "repair_ip", 8192, NULL, 5, &TaskHandle_repair); //NULL
 	} else{ // neu truoc do ket noi ap that bai 10 lan thi chuyen mode
 		initialise_ap();
 	}
 //    create WebSocker receive task
 //    xTaskCreate(&task_process_WebSocket, "ws_process_rx", 2048, NULL, 5, NULL);
-    xTaskCreatePinnedToCore(&task_process_WebSocket, "ws_process_rx", 2048, NULL, 5, NULL, 0);
+//    xTaskCreatePinnedToCore(&task_process_WebSocket, "ws_process_rx", 2048, NULL, 5, NULL, 0);
 
 //    Create Websocket Server Task
-//    xTaskCreate(&ws_server, "ws_server", 2048, NULL, 5, NULL);
-    xTaskCreatePinnedToCore(&ws_server, "ws_server", 2048, NULL, 4, NULL, 0);
+    xTaskCreate(&ws_server, "ws_server", 2048, NULL, 4, NULL);
+//    xTaskCreatePinnedToCore(&ws_server, "ws_server", 2048, NULL, 4, NULL, 0);
 
 }

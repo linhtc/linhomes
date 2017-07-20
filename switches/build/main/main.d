@@ -111,12 +111,6 @@ main.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/rom/ets_sys.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/xtensa_api.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/include/nvs_flash.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/err.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/sockets.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/inet.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/sys.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/netdb.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/dns.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/mbedtls/include/mbedtls/platform.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/mbedtls/port/include/mbedtls/esp_config.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/mbedtls/include/mbedtls/check_config.h \
@@ -156,7 +150,9 @@ main.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switches/main/./WebSocket_Task.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/api.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/netbuf.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/pbuf.h
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/pbuf.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/err.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/sys.h
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/string.h:
 
@@ -380,18 +376,6 @@ main.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/include/nvs_flash.h:
 
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/err.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/sockets.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/inet.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/sys.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/netdb.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/dns.h:
-
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/mbedtls/include/mbedtls/platform.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/mbedtls/port/include/mbedtls/esp_config.h:
@@ -471,4 +455,8 @@ main.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/netbuf.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/pbuf.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/err.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/lwip/include/lwip/lwip/sys.h:
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/examples/linhomes/switches/main/./main.c:

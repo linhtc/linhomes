@@ -37,6 +37,13 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "lwip/sockets.h"
+#include "lwip/sys.h"
+#include "lwip/netdb.h"
+#include "lwip/dns.h"
+#include "lwip/api.h"
+#include <lwip/err.h>
+
 #define WS_PORT				9998	/**< \brief TCP Port for the Server*/
 #define WS_CLIENT_KEY_L		24		/**< \brief Length of the Client Key*/
 #define SHA1_RES_L			20		/**< \brief SHA1 result*/
