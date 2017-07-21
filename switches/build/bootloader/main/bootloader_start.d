@@ -34,11 +34,12 @@ bootloader_start.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/soc/esp32/include/soc/gpio_sig_map.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/bootloader_support/include/esp_image_format.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_err.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/bootloader_support/include/esp_flash_partitions.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_flash_data_types.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/bootloader_support/include/esp_secure_boot.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/bootloader_support/include/esp_flash_encrypt.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/spi_flash/include/esp_spi_flash.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/bootloader_support/include/esp_flash_partitions.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_flash_data_types.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/bootloader_support/include_priv/bootloader_flash.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/bootloader_support/include_priv/bootloader_random.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/bootloader/subproject/main/./bootloader_config.h \
@@ -112,6 +113,10 @@ bootloader_start.o: \
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_err.h:
 
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/bootloader_support/include/esp_flash_partitions.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_flash_data_types.h:
+
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/bootloader_support/include/esp_secure_boot.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/bootloader_support/include/esp_flash_encrypt.h:
@@ -119,8 +124,6 @@ bootloader_start.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/spi_flash/include/esp_spi_flash.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/bootloader_support/include/esp_flash_partitions.h:
-
-/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_flash_data_types.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/bootloader_support/include_priv/bootloader_flash.h:
 

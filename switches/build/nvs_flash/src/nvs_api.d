@@ -22,6 +22,7 @@ src/nvs_api.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/src/nvs_pagemanager.hpp \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/src/nvs_storage.hpp \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/include/nvs_flash.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/include/nvs.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/src/nvs_platform.hpp \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h \
@@ -98,6 +99,8 @@ src/nvs_api.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/src/nvs_storage.hpp:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/include/nvs_flash.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/include/nvs.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/src/nvs_platform.hpp:
 

@@ -67,6 +67,7 @@ phy_init.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/log/include/esp_log.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/include/nvs.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/include/nvs_flash.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/include/nvs.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/./phy.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/./phy_init_data.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/esp_coexist.h
@@ -204,6 +205,8 @@ phy_init.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/include/nvs.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/include/nvs_flash.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/include/nvs.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/./phy.h:
 

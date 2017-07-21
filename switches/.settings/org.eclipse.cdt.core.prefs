@@ -21,6 +21,17 @@ environment/project/cdt.managedbuild.toolchain.gnu.cross.base.1347968144/PATH/op
 environment/project/cdt.managedbuild.toolchain.gnu.cross.base.1347968144/PATH/value=/bin\:/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/snap/bin\:/home/leon/Documents/WorkSpace/Espressif/esp-idf/tools/xtensa-esp32-elf/bin
 environment/project/cdt.managedbuild.toolchain.gnu.cross.base.1347968144/append=true
 environment/project/cdt.managedbuild.toolchain.gnu.cross.base.1347968144/appendContributed=true
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.1453886243/BATCH_BUILD/delimiter=\:
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.1453886243/BATCH_BUILD/operation=append
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.1453886243/BATCH_BUILD/value=1
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.1453886243/IDF_PATH/delimiter=\:
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.1453886243/IDF_PATH/operation=append
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.1453886243/IDF_PATH/value=/home/leon/Documents/WorkSpace/Espressif/esp-idf
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.1453886243/PATH/delimiter=\:
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.1453886243/PATH/operation=replace
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.1453886243/PATH/value=/bin\:/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/snap/bin\:/home/leon/Documents/WorkSpace/Espressif/esp-idf/tools/toolchain/xtensa-esp32-elf/bin
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.1453886243/append=true
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.1453886243/appendContributed=true
 environment/project/cdt.managedbuild.toolchain.gnu.cross.base.1993661947/BATCH_BUILD/delimiter=\:
 environment/project/cdt.managedbuild.toolchain.gnu.cross.base.1993661947/BATCH_BUILD/operation=append
 environment/project/cdt.managedbuild.toolchain.gnu.cross.base.1993661947/BATCH_BUILD/value=1

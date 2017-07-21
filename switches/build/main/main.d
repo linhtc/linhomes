@@ -111,6 +111,7 @@ main.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/esp32/include/rom/ets_sys.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/xtensa_api.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/include/nvs_flash.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/include/nvs.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/mbedtls/include/mbedtls/platform.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/mbedtls/port/include/mbedtls/esp_config.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/mbedtls/include/mbedtls/check_config.h \
@@ -375,6 +376,8 @@ main.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/freertos/include/freertos/xtensa_api.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/include/nvs_flash.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/nvs_flash/include/nvs.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/mbedtls/include/mbedtls/platform.h:
 

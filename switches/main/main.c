@@ -84,7 +84,7 @@ const int CONNECTED_BIT = BIT0;
 //#define WEB_URL "https://www.howsmyssl.com/a/check"
 #define WEB_SERVER "linhomes-afa8a.firebaseio.com"
 #define WEB_PORT "443"
-#define WEB_URL "/switchs/"
+#define WEB_URL "/switches/"
 
 #define GPIO_OUTPUT_PIN_SEL  ((1<<GPIO_NUM_18))
 #define ESP_INTR_FLAG_DEFAULT 0

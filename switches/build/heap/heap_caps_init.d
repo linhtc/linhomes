@@ -52,7 +52,8 @@ heap_caps_init.o: \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/heap/include/multi_heap.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/string.h \
  /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/string.h \
- /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/log/include/esp_log.h
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/log/include/esp_log.h \
+ /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/heap/include/esp_heap_caps.h
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/heap/./heap_private.h:
 
@@ -159,4 +160,6 @@ heap_caps_init.o: \
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/newlib/include/sys/string.h:
 
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/log/include/esp_log.h:
+
+/home/leon/Documents/WorkSpace/Espressif/esp-idf/components/heap/include/esp_heap_caps.h:
 /home/leon/Documents/WorkSpace/Espressif/esp-idf/components/heap/./heap_caps_init.c:
