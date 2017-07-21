@@ -200,26 +200,6 @@ static void IRAM_ATTR gpio_isr_handler(void* arg){
     xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
 }
 
-static void gpio_task_example(void* arg){
-    uint32_t io_num;
-    for(;;) {
-        if(xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
-            printf("GPIO[%d] intr, val: %d\n", io_num, gpio_get_level(io_num));
-            if(io_num == GPIO_NUM_14){
-            	if(handle_nvs("w_mode", 1, 1) == ESP_OK){ // keo chan 13 len cao thi switch sang mode ap
-            		const esp_partition_t* nvs_partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_NVS, NULL);
-					assert(nvs_partition && "partition table must have an NVS partition");
-					ESP_ERROR_CHECK( esp_partition_erase_range(nvs_partition, 0, nvs_partition->size) );
-            		gpio_isr_handler_remove(GPIO_NUM_14);
-            	    vTaskDelay(1000 / portTICK_PERIOD_MS);
-					esp_restart();
-            		vTaskDelete(NULL);
-				}
-            }
-        }
-    }
-}
-
 static void control_18(void *pvParameters){
 	int req = (int)pvParameters;
 	if(pin_state < 0){
@@ -273,6 +253,9 @@ static void info_listener(char *buf){
 static void https_get_task(void *pvParameters){
     char buf[125];
     int ret, flags, len;
+
+    // touches
+    uint32_t io_num;
 
     //frame buffer
 	WebSocket_frame_t __RX_frame;
@@ -339,6 +322,22 @@ static void https_get_task(void *pvParameters){
 
     while(1) {
         xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, false, true, portMAX_DELAY);
+
+        // touches listenner
+        if(xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
+			printf("GPIO[%d] intr, val: %d\n", io_num, gpio_get_level(io_num));
+			if(io_num == GPIO_NUM_14){
+				if(handle_nvs("w_mode", 1, 1) == ESP_OK){ // keo chan 13 len cao thi switch sang mode ap
+					const esp_partition_t* nvs_partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_NVS, NULL);
+					assert(nvs_partition && "partition table must have an NVS partition");
+					ESP_ERROR_CHECK( esp_partition_erase_range(nvs_partition, 0, nvs_partition->size) );
+					gpio_isr_handler_remove(GPIO_NUM_14);
+					vTaskDelay(1000 / portTICK_PERIOD_MS);
+					esp_restart();
+					vTaskDelete(NULL);
+				}
+			}
+		}
 
         //receive next WebSocket frame from queue
 		if(ws_check_client() > 0){
@@ -732,6 +731,7 @@ static void repair_ip(void *pvParameters){
 				ESP_LOGW(TAG, "ws_rst_client");
 				handshake_ws = 0;
 				ws_ack = false;
+				// rst ws
 				ws_rst_client();
 			}
 
@@ -772,8 +772,8 @@ void app_main(){
 	}
 	gpio_set_direction(GPIO_NUM_14, GPIO_MODE_INPUT);
 	gpio_set_intr_type(GPIO_NUM_14, GPIO_INTR_POSEDGE);
-	gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
-	xTaskCreate(gpio_task_example, "gpio_task_example", 2048, NULL, 10, NULL);
+	gpio_evt_queue = xQueueCreate(1, sizeof(uint32_t));
+//	xTaskCreate(gpio_task_example, "gpio_task_example", 2048, NULL, 10, NULL);
 	gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
 	gpio_isr_handler_add(GPIO_NUM_14, gpio_isr_handler, (void*) GPIO_NUM_14);
 
