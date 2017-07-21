@@ -261,11 +261,9 @@ static void info_listener(char *buf){
 			char *test = cJSON_Print(root);
 			ESP_LOGI(TAG, "cJSON_Print----------->");
 			printf("%s\n", test);
-			if(ws_check_client() < 1){
-				cJSON *pin18_request = cJSON_GetObjectItem(root, "req");
-				if(pin18_request != NULL){
-					xTaskCreate(&control_18, "control_18", 8192, (void*)pin18_request->valueint, 4, &TaskHandle_ctrl_18);
-				}
+			cJSON *pin18_request = cJSON_GetObjectItem(root, "req");
+			if(pin18_request != NULL){
+				xTaskCreate(&control_18, "control_18", 8192, (void*)pin18_request->valueint, 4, &TaskHandle_ctrl_18);
 			}
 		}
 	}
@@ -560,24 +558,26 @@ static void https_get_task(void *pvParameters){
 				}
 				strcat(final_buf, buf);
 			} while(1);
+
+			// perform task
 			info_listener(final_buf);
 
 			mbedtls_ssl_close_notify(&ssl);
-		}
-	exit:
-		mbedtls_ssl_session_reset(&ssl);
-		mbedtls_net_free(&server_fd);
-		if(ret != 0) {
-			mbedtls_strerror(ret, buf, 100);
-			gettask_err++;
-			ESP_LOGE(TAG, "Last error was: -0x%x - %s in %d times", -ret, buf, gettask_err);
-			if(gettask_err > 5 && ws_check_client() < 1){ // error in loop - 6 times
-				ESP_LOGW(TAG, "many error in get task -> esp restart");
-				esp_restart();
-				vTaskDelete(NULL);
+
+			exit:
+				mbedtls_ssl_session_reset(&ssl);
+				mbedtls_net_free(&server_fd);
+				if(ret != 0) {
+					mbedtls_strerror(ret, buf, 100);
+					gettask_err++;
+					ESP_LOGE(TAG, "Last error was: -0x%x - %s in %d times", -ret, buf, gettask_err);
+					if(gettask_err > 5){ // error in loop - 6 times
+						ESP_LOGW(TAG, "many error in get task -> esp restart");
+						esp_restart();
+						vTaskDelete(NULL);
+					}
+				} else{ gettask_err = 0;
 			}
-		} else{
-			gettask_err = 0;
 		}
     }
     vTaskDelete(NULL);
@@ -721,8 +721,8 @@ static void repair_ip(void *pvParameters){
 			ESP_LOGW(TAG, "should to update ip address");
 			ESP_LOGW(TAG, "ip old %s - new %s", uc_ip, ip_address);
 			snprintf(uc_ip, sizeof(uc_ip), "%s", ip_address);
-//			handle_snvs("wi", (char *)uc_ip, 1);
-//			pushing = true; // rewrite data to FireBase
+			handle_snvs("wi", (char *)uc_ip, 1);
+			pushing = true; // rewrite data to FireBase
 		}
 		if(ws_check_client() > 0){ /* ws connected -> remove get task */
 			handshake_ws++;

@@ -52,12 +52,6 @@ typedef struct{
 	char*				payload;
 }WebSocket_frame_t;
 
-/** \brief Websocket frame type*/
-typedef struct{
-	uint8_t				conencted;
-}WebSocket_frame_f;
-
-
 /**
  * \brief Send data to the websocket client
  *

@@ -65,9 +65,6 @@ extern QueueHandle_t WebSocket_rx_queue;
 
 //Reference to open websocket connection
 static struct netconn* WS_conn = NULL;
-
-WebSocket_frame_f __ws_frame_f;
-
 const char WS_sec_WS_keys[] = "Sec-WebSocket-Key:";
 const char WS_sec_conKey[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const char WS_srv_hs[] ="HTTP/1.1 101 Switching Protocols \r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %.*s\r\n\r\n";
@@ -195,7 +192,6 @@ static void ws_server_netconn_serve(struct netconn *conn) {
 
 					//set pointer to open WebSocket connection
 					WS_conn = conn;
-					__ws_frame_f.conencted = 1;
 
 					//Wait for new data
 					while (netconn_recv(conn, &inbuf) == ERR_OK) {
@@ -208,7 +204,6 @@ static void ws_server_netconn_serve(struct netconn *conn) {
 
 						//check if clients wants to close the connection
 						if (p_frame_hdr->opcode == WS_OP_CLS){
-							__ws_frame_f.conencted = 0;
 							break;
 						}
 
@@ -270,7 +265,6 @@ static void ws_server_netconn_serve(struct netconn *conn) {
 
 	//release pointer to open WebSocket connection
 	WS_conn = NULL;
-	__ws_frame_f.conencted = 0;
 
 	//delete buffer
 	netbuf_delete(inbuf);
