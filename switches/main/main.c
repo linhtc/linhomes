@@ -200,6 +200,24 @@ static void IRAM_ATTR gpio_isr_handler(void* arg){
     xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
 }
 
+static void gpio_event_handler(void* arg){
+    uint32_t io_num;
+	if(xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
+		printf("GPIO[%d] intr, val: %d\n", io_num, gpio_get_level(io_num));
+		if(io_num == GPIO_NUM_14){
+			if(handle_nvs("w_mode", 1, 1) == ESP_OK){ // keo chan 13 len cao thi switch sang mode ap
+				const esp_partition_t* nvs_partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_NVS, NULL);
+				assert(nvs_partition && "partition table must have an NVS partition");
+				ESP_ERROR_CHECK( esp_partition_erase_range(nvs_partition, 0, nvs_partition->size) );
+				gpio_isr_handler_remove(GPIO_NUM_14);
+				vTaskDelay(1000 / portTICK_PERIOD_MS);
+				esp_restart();
+				vTaskDelete(NULL);
+			}
+		}
+	}
+}
+
 static void control_18(void *pvParameters){
 	int req = (int)pvParameters;
 	if(pin_state < 0){
@@ -254,9 +272,6 @@ static void https_get_task(void *pvParameters){
     char buf[125];
     int ret, flags, len;
 
-    // touches
-    uint32_t io_num;
-
     //frame buffer
 	WebSocket_frame_t __RX_frame;
 
@@ -301,7 +316,7 @@ static void https_get_task(void *pvParameters){
 
     ESP_LOGI(TAG, "Setting up the SSL/TLS structure...");
 
-	mbedtls_ssl_conf_read_timeout(&conf, 9000);
+	mbedtls_ssl_conf_read_timeout(&conf, 3000);
     if((ret = mbedtls_ssl_config_defaults(&conf, MBEDTLS_SSL_IS_CLIENT,
 		MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT)) != 0 ) {
     	ESP_LOGE(TAG, "mbedtls_ssl_config_defaults returned %d", ret);
@@ -322,22 +337,6 @@ static void https_get_task(void *pvParameters){
 
     while(1) {
         xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, false, true, portMAX_DELAY);
-
-        // touches listenner
-        if(xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
-			printf("GPIO[%d] intr, val: %d\n", io_num, gpio_get_level(io_num));
-			if(io_num == GPIO_NUM_14){
-				if(handle_nvs("w_mode", 1, 1) == ESP_OK){ // keo chan 13 len cao thi switch sang mode ap
-					const esp_partition_t* nvs_partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_NVS, NULL);
-					assert(nvs_partition && "partition table must have an NVS partition");
-					ESP_ERROR_CHECK( esp_partition_erase_range(nvs_partition, 0, nvs_partition->size) );
-					gpio_isr_handler_remove(GPIO_NUM_14);
-					vTaskDelay(1000 / portTICK_PERIOD_MS);
-					esp_restart();
-					vTaskDelete(NULL);
-				}
-			}
-		}
 
         //receive next WebSocket frame from queue
 		if(ws_check_client() > 0){
@@ -433,9 +432,14 @@ static void https_get_task(void *pvParameters){
 	        printf("WS num: %d\n", ws_check_client());
 	        ESP_LOGI(TAG, "Connected to AP");
 			mbedtls_net_init(&server_fd);
+			mbedtls_net_set_nonblock(&server_fd);
+			mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
 
 			ESP_LOGI(TAG, "Connecting to %s:%s...", WEB_SERVER, WEB_PORT);
-
+			if(ws_check_client() > 0){
+				ESP_LOGW(TAG, "ws connected then mbedtls_net_connect -> break");
+				goto exit;
+			}
 			if ((ret = mbedtls_net_connect(&server_fd, WEB_SERVER, WEB_PORT, MBEDTLS_NET_PROTO_TCP)) != 0){
 				ESP_LOGE(TAG, "mbedtls_net_connect returned -%x", -ret);
 				goto exit;
@@ -444,16 +448,19 @@ static void https_get_task(void *pvParameters){
 			ESP_LOGI(TAG, "Connected to FireBase");
 
 	//        mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
-			mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
+//			mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
 
 			ESP_LOGI(TAG, "Performing the SSL/TLS handshake...");
-			while ((ret = mbedtls_ssl_handshake(&ssl)) != 0){
+			while (ws_check_client() < 1 && (ret = mbedtls_ssl_handshake(&ssl)) != 0){
 				if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
 					ESP_LOGE(TAG, "mbedtls_ssl_handshake returned -0x%x", -ret);
 					goto exit;
 				}
 			}
-
+			if(ws_check_client() > 0){
+				ESP_LOGW(TAG, "ws connected then mbedtls_ssl_handshake -> break");
+				goto exit;
+			}
 			ESP_LOGI(TAG, "Verifying peer X.509 certificate...");
 
 			if ((flags = mbedtls_ssl_get_verify_result(&ssl)) != 0){
@@ -525,6 +532,10 @@ static void https_get_task(void *pvParameters){
 			}
 			printf("req -> %s\nreq size -> %d\n", REQUEST, strlen(REQUEST));
 			while((ret = mbedtls_ssl_write(&ssl, (const unsigned char *)REQUEST, strlen(REQUEST))) <= 0){
+				if(ws_check_client() > 0){
+					ESP_LOGW(TAG, "ws connected then mbedtls_ssl_write -> break");
+					goto exit;
+				}
 				if(ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE){
 					ESP_LOGE(TAG, "mbedtls_ssl_write returned -0x%x", -ret);
 					goto exit;
@@ -536,6 +547,10 @@ static void https_get_task(void *pvParameters){
 			ESP_LOGI(TAG, "Reading HTTP response...");
 			char final_buf[256] = "";
 			do{
+				if(ws_check_client() > 0){
+					ESP_LOGW(TAG, "ws connected then mbedtls_ssl_read -> break");
+					goto exit;
+				}
 				len = sizeof(buf) - 1;
 				bzero(buf, sizeof(buf));
 				ret = mbedtls_ssl_read(&ssl, (unsigned char *)buf, len);
@@ -562,23 +577,22 @@ static void https_get_task(void *pvParameters){
 			info_listener(final_buf);
 
 			mbedtls_ssl_close_notify(&ssl);
-
-			exit:
-				mbedtls_ssl_session_reset(&ssl);
-				mbedtls_net_free(&server_fd);
-				if(ret != 0) {
-					mbedtls_strerror(ret, buf, 100);
-					gettask_err++;
-					ESP_LOGE(TAG, "Last error was: -0x%x - %s in %d times", -ret, buf, gettask_err);
-					if(gettask_err > 5){ // error in loop - 6 times
-						ESP_LOGW(TAG, "many error in get task -> esp restart");
-						esp_restart();
-						vTaskDelete(NULL);
-					}
-				} else{ gettask_err = 0;
-			}
 		}
+		exit:
+			mbedtls_ssl_session_reset(&ssl);
+			mbedtls_net_free(&server_fd);
+			if(ret != 0) {
+				mbedtls_strerror(ret, buf, 100);
+				gettask_err++;
+				ESP_LOGE(TAG, "Last error was: -0x%x - %s in %d times", -ret, buf, gettask_err);
+				if(gettask_err > 5){ // error in loop - 6 times
+					ESP_LOGW(TAG, "many error in get task -> esp restart");
+					esp_restart();
+					vTaskDelete(NULL);
+				}
+			} else{ gettask_err = 0; }
     }
+//	ESP_LOGW(TAG, "many error in get task -> esp restart");
     vTaskDelete(NULL);
 }
 
@@ -745,6 +759,7 @@ static void repair_ip(void *pvParameters){
 				ESP_LOGW(TAG, "wake up slave -> %d", err);
 			}
 		} else{
+			handshake_ws = 0;
 	    	ESP_LOGI(TAG, "ip lookup at %s", ip_address);
 		}
 
@@ -773,7 +788,7 @@ void app_main(){
 	gpio_set_direction(GPIO_NUM_14, GPIO_MODE_INPUT);
 	gpio_set_intr_type(GPIO_NUM_14, GPIO_INTR_POSEDGE);
 	gpio_evt_queue = xQueueCreate(1, sizeof(uint32_t));
-//	xTaskCreate(gpio_task_example, "gpio_task_example", 2048, NULL, 10, NULL);
+	xTaskCreate(gpio_event_handler, "gpio_event_handler", 2048, NULL, 10, NULL);
 	gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
 	gpio_isr_handler_add(GPIO_NUM_14, gpio_isr_handler, (void*) GPIO_NUM_14);
 
@@ -792,9 +807,9 @@ void app_main(){
 	// neu ket noi duoc wifi truoc do thi bat mode sta
 	if(handle_nvs("w_mode", 0, 0) < 1 && strlen((const char *)uc_ssid) > 0){
 	    initialise_wifi();
-	    xTaskCreatePinnedToCore(&https_get_task, "https_get_task", 8192, NULL, 4, &TaskHandle_get, 1);
+	    xTaskCreatePinnedToCore(&https_get_task, "https_get_task", 8192, NULL, 5, &TaskHandle_get, 1);
 //	    xTaskCreate(&https_get_task, "https_get_task", 8192, NULL, 2, &TaskHandle_get); //NULL
-	    xTaskCreate(&repair_ip, "repair_ip", 8192, NULL, 5, &TaskHandle_repair); //NULL
+	    xTaskCreate(&repair_ip, "repair_ip", 8192, NULL, 4, &TaskHandle_repair); //NULL
 	} else{ // neu truoc do ket noi ap that bai 10 lan thi chuyen mode
 		initialise_ap();
 	}
